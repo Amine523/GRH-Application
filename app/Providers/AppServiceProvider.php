@@ -15,11 +15,11 @@ class AppServiceProvider extends ServiceProvider
         //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
-    public function boot(): void
+    public function boot(UrlGenerator $url): void
     {
-        Vite::prefetch(concurrency: 3);
+        $this->app->bind(ValidatePropertiesDataPipe::class, PrecognitivelyValidatePropertiesDataPipe::class);
+//        if (config('app.env') !== 'local') {
+        $url->forceScheme('https');
+//        }
     }
 }
