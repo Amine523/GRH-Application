@@ -1,14 +1,11 @@
 before_script:
   - export COMPOSER_ALLOW_SUPERUSER=1
   - export PATH="/root/.nvm/versions/node/v21.7.3/bin/node:$PATH"
-  
-.sed_template: &sed_template |
- sed -i 's/"web-dir": "dev"/"web-dir": "public"/g' composer.json
 
 stages:          
   - build
 
-build-dev-client-job:       
+build-job:       
   stage: build
   tags:
   - grh
