@@ -20,6 +20,6 @@ build-job:
     - ls -la
     - node -v
     - npm install
-    - composer install
+    - /usr/bin/php8.2 composer install
 
   
