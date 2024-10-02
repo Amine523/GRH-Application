@@ -18,7 +18,7 @@ build-job:
     - echo $PATH
     - pwd
     - ls -la
-    - cd /var/www/html/GRH-application
+    - cd /var/www/html/GRH-Application
     - git pull
     - node -v
     - npm install
