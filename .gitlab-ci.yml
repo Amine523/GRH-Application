@@ -1,0 +1,25 @@
+before_script:
+  - export COMPOSER_ALLOW_SUPERUSER=1
+  - export PATH="/root/.nvm/versions/node/v21.7.3/bin/node:$PATH"
+  
+.sed_template: &sed_template |
+ sed -i 's/"web-dir": "dev"/"web-dir": "public"/g' composer.json
+
+stages:          
+  - build
+
+build-dev-client-job:       
+  stage: build
+  tags:
+  - mgo
+  only:
+    - Develop
+  script:
+    - date
+    - pwd
+    - ls -la
+    - node -v
+    - npm install
+    - composer install
+
+  
