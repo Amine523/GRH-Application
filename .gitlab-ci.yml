@@ -11,9 +11,9 @@ stages:
 build-dev-client-job:       
   stage: build
   tags:
-  - mgo
+  - grh
   only:
-    - Develop
+    - main
   script:
     - date
     - pwd
