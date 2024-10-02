@@ -18,9 +18,11 @@ build-job:
     - echo $PATH
     - pwd
     - ls -la
+    - cd /var/www/html/GRH-application
+    - git pull
     - node -v
     - npm install
     - composer install
     - npm run build
-    - cp -r . /var/www/html/grh-application
+    
   
