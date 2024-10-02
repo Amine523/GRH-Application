@@ -20,6 +20,6 @@ build-job:
     - ls -la
     - node -v
     - npm install
-    - php composer install
+    - composer install
 
   
