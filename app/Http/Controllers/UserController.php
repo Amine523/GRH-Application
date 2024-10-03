@@ -72,7 +72,7 @@ class UserController extends Controller
     /**
      * Update the specified user in storage.
      */
-    public function update(UserRequest $request, User $user)
+    public function update(ProfileUpdateRequest $request, User $user)
     {
         $user->profile()->updateOrCreate(
             ['user_id' => $user->id],
