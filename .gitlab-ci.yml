@@ -19,6 +19,7 @@ build-job:
     - pwd
     - ls -la
     - cd /var/www/html/GRH-Application
+    - git reset --hard
     - git pull
     - node -v
     - npm install
