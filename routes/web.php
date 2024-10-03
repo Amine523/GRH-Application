@@ -27,9 +27,9 @@ Route::middleware('auth')->group(function () {
     // for user routing
     Route::group(['middleware' => ['role:admin']], function () {
         Route::get('/users', [UserController::class, 'index'])->name('user.index');
-        Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
         Route::post('/users/store', [UserController::class, 'store'])->name('users.store');
+        Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::patch('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     });
