@@ -2,8 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Requests\UserRequest;
+use App\Mail\UserAuth;
+use App\Mail\WelcomeNewUserMail;
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -34,14 +39,15 @@ class UserController extends Controller
     /**
      * Store a newly created user in storage.
      */
-    public function store(UserRequest $request)
+    public function store(UserRequest $userRequest, ProfileUpdateRequest $profileUpdateRequest)
     {
         $user = User::create([
-            'email' => $request->email,
-            'password' => bcrypt($request->password),
+            'email' => $userRequest->validated()['email'],
+            'password' => Hash::make('password'),
         ]);
-
-        return redirect()->route('users.index')->with('success', 'User created successfully.');
+        $user->profile()->create($profileUpdateRequest->validated());
+        Mail::to($user->email)->send(new WelcomeNewUserMail($user));
+        return to_route('user.index');
     }
 
     /**
