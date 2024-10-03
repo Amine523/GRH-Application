@@ -16,19 +16,19 @@ class UserController extends Controller
      */
     public function index(): Response
     {
-        $users = User::with('profile')->get(); // Fetch all users
+        $users = User::with('profile')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'profile' => $user->profile,
+                    'roles' => $user->getRoleNames(),
+                ];
+            });
 
         return Inertia::render('Users/Index', [
             'users' => $users,
         ]);
-    }
-
-    /**
-     * Show the form for creating a new user.
-     */
-    public function create(): Response
-    {
-        return Inertia::render('Users/Create');
     }
 
     /**
@@ -45,10 +45,19 @@ class UserController extends Controller
     }
 
     /**
+     * Show the form for creating a new user.
+     */
+    public function create(): Response
+    {
+        return Inertia::render('Users/Create');
+    }
+
+    /**
      * Show the form for editing the specified user.
      */
     public function edit(User $user): Response
     {
+        $user->load('profile');
         return Inertia::render('Users/Edit', [
             'user' => $user,
         ]);
@@ -59,13 +68,11 @@ class UserController extends Controller
      */
     public function update(UserRequest $request, User $user)
     {
-        $user->update([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => $request->password ? bcrypt($request->password) : $user->password, // Hash if provided
-        ]);
-
-        return redirect()->route('users.index')->with('success', 'User updated successfully.');
+        $user->profile()->updateOrCreate(
+            ['user_id' => $user->id],
+            $request->validated()
+        );
+        return to_route('user.index');
     }
 
     /**
@@ -75,6 +82,6 @@ class UserController extends Controller
     {
         $user->delete();
 
-        return redirect()->route('users.index')->with('success', 'User deleted successfully.');
+        return to_route('user.index');
     }
 }

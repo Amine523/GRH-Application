@@ -1,5 +1,3 @@
-
-
 <template>
     <section>
         <header>
@@ -30,21 +28,49 @@
             </div>
 
             <div class="flex items-center gap-4">
-                <!-- Edit Button -->
-                <Link :href="`/users/${user.id}/edit`" class="text-blue-500 underline">
-                    <PrimaryButton>Edit</PrimaryButton>
-                </Link>
 
-                <!-- Delete Button -->
-                <PrimaryButton @click="deleteUser(user.id)" class="bg-red-500 text-white">Delete</PrimaryButton>
+                <PrimaryButton :disabled="isAdmin(user)" @click="editUser(user.id)" class="bg-#082f49 text-white">
+                    edit
+                </PrimaryButton>
+
+                <PrimaryButton :disabled="isAdmin(user)" @click="deleteUser(user.id)" class="bg-red-500 text-white">
+                    Delete
+                </PrimaryButton>
             </div>
         </div>
     </section>
 </template>
-<script >
-export default {
-    props: {
-        users : {type:Object}
-    },
-}
+
+<script setup>
+import {router} from '@inertiajs/vue3';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
+import {useToast} from "vue-toastification";
+import "vue-toastification/dist/index.css";
+
+defineProps({
+    users: Array,
+});
+const toast = useToast();
+
+const deleteUser = (id) => {
+    if (confirm('Are you sure you want to delete this user?')) {
+        router.delete(`/users/${id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('User deleted successfully!');
+            },
+            onError: () => {
+                toast.error('There was an error deleting the user.');
+            }
+        });
+    }
+};
+
+const editUser = (id) => {
+    router.get(`/users/${id}/edit`);
+};
+const isAdmin = (user) => {
+    return user.roles.includes('admin')
+};
+
 </script>
