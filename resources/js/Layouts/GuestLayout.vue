@@ -12,7 +12,7 @@ import { Link } from '@inertiajs/vue3';
                 <img
                     id="background"
                     class="h-10 w-auto lg:h-32"
-                    src="/storage/logo-softtodo.png"
+                    src="/images/logo-softtodo.png"
                     alt="Logo"
                 />
             </Link>

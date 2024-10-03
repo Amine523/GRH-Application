@@ -32,12 +32,12 @@ function handleImageError() {
         <img
             id="background"
             class="absolute -left-20 top-0 max-w-[877px]"
-            src="/storage/background.svg"
+            src="/images/background.svg"
         />
         <img
             id="background"
             class="absolute -right-20 top-0 max-w-[877px] transform scale-x-[-1]"
-            src="/storage/background.svg"
+            src="/images/background.svg"
         />
         <div
             class="relative flex min-h-screen flex-col items-center justify-center selection:bg-[#FF2D20] selection:text-white"
@@ -49,7 +49,7 @@ function handleImageError() {
                         <img
                             id="background"
                             class="h-40 w-auto lg:h-40"
-                        src="/storage/logo-softtodo.png"
+                        src="/images/logo-softtodo.png"
                         alt="Logo"
                         />
                     </div>
