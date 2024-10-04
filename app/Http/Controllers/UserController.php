@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Requests\UserRequest;
+use App\Http\Requests\UserRoleRequest;
 use App\Mail\UserAuth;
 use App\Mail\WelcomeNewUserMail;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -30,23 +32,26 @@ class UserController extends Controller
                     'roles' => $user->getRoleNames(),
                 ];
             });
+        $roles = Role::all();
 
         return Inertia::render('Users/Index', [
             'users' => $users,
+            'roles' => $roles,
         ]);
     }
 
     /**
      * Store a newly created user in storage.
      */
-    public function store(UserRequest $userRequest, ProfileUpdateRequest $profileUpdateRequest)
+    public function store(UserRequest $userRequest, ProfileUpdateRequest $profileUpdateRequest , UserRoleRequest $userRoleRequest)
     {
         $user = User::create([
             'email' => $userRequest->validated()['email'],
             'password' => Hash::make('password'),
         ]);
         $user->profile()->create($profileUpdateRequest->validated());
-        Mail::to($user->email)->send(new WelcomeNewUserMail($user));
+        $user->assignRole($userRoleRequest->validated()['role_id']);
+//        Mail::to($user->email)->send(new WelcomeNewUserMail($user));
         return to_route('user.index');
     }
 
@@ -55,7 +60,10 @@ class UserController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('Users/Create');
+        $roles = Role::all();
+        return Inertia::render('Users/Create', [
+            'roles' => $roles,
+        ]);
     }
 
     /**

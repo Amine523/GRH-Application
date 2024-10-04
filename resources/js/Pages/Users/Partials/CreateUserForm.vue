@@ -10,8 +10,9 @@
             @submit.prevent="createUser"
             class="mt-3 space-y-3"
         >
-            <div class="flex space-x-4">
-                <div class="w-1/2">
+            <!-- Three form fields in one row -->
+            <div class="grid grid-cols-3 gap-4">
+                <div>
                     <InputLabel for="email" value="Email"/>
 
                     <TextInput
@@ -23,11 +24,11 @@
                         autocomplete="email"
                     />
 
-                    <InputError class="mt-2" :message="form.errors.email" />
+                    <InputError class="mt-2" :message="form.errors.email"/>
                 </div>
 
-                <div class="w-1/2">
-                    <InputLabel for="first_name" value="First Name" />
+                <div>
+                    <InputLabel for="first_name" value="First Name"/>
 
                     <TextInput
                         id="first_name"
@@ -38,11 +39,11 @@
                         autocomplete="first_name"
                     />
 
-                    <InputError class="mt-2" :message="form.errors.first_name" />
+                    <InputError class="mt-2" :message="form.errors.first_name"/>
                 </div>
 
-                <div class="w-1/2">
-                    <InputLabel for="last_name" value="Last Name" />
+                <div>
+                    <InputLabel for="last_name" value="Last Name"/>
 
                     <TextInput
                         id="last_name"
@@ -52,14 +53,14 @@
                         autocomplete="last_name"
                     />
 
-                    <InputError class="mt-2" :message="form.errors.last_name" />
+                    <InputError class="mt-2" :message="form.errors.last_name"/>
                 </div>
             </div>
 
-            <!-- Phone Number and Address side by side -->
-            <div class="flex space-x-4">
-                <div class="w-1/2">
-                    <InputLabel for="phone_number" value="Phone Number" />
+            <!-- Phone Number, Address, and Country in one row -->
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <InputLabel for="phone_number" value="Phone Number"/>
 
                     <TextInput
                         id="phone_number"
@@ -69,11 +70,11 @@
                         autocomplete="phone"
                     />
 
-                    <InputError class="mt-2" :message="form.errors.phone_number" />
+                    <InputError class="mt-2" :message="form.errors.phone_number"/>
                 </div>
 
-                <div class="w-1/2">
-                    <InputLabel for="address" value="Address" />
+                <div>
+                    <InputLabel for="address" value="Address"/>
 
                     <TextInput
                         id="address"
@@ -83,7 +84,19 @@
                         autocomplete="address"
                     />
 
-                    <InputError class="mt-2" :message="form.errors.address" />
+                    <InputError class="mt-2" :message="form.errors.address"/>
+                </div>
+
+                <div>
+                    <InputLabel for="role_id" value="User Role"/>
+                    <SelectItems
+                        id="role_id"
+                        v-model="form.role_id"
+                        :options="roleOptions"
+                        :error="form.errors.role_id"
+                        class="mt-1 block w-full"
+                        label=""
+                    />
                 </div>
             </div>
 
@@ -101,18 +114,23 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { useForm } from '@inertiajs/vue3';
-import { useToast } from 'vue-toastification';
+import {useForm, usePage} from '@inertiajs/vue3';
+import {useToast} from 'vue-toastification';
+import SelectItems from '@/Components/SelectItems.vue';
 
 const toast = useToast();
-
-// Initialize form data for user creation
+const { roles } = usePage().props;
+const roleOptions = roles.map(role => ({
+    value: role.name,
+    label: role.name
+}));
 const form = useForm({
     email: '',
     first_name: '',
     last_name: '',
     phone_number: '',
-    address: ''
+    address: '',
+    role_id: '',
 });
 
 const createUser = () => {

@@ -1,9 +1,3 @@
-<script setup>
-
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import CreateUserForm from "@/Pages/Users/Partials/CreateUserForm.vue";
-</script>
-
 <template>
     <AuthenticatedLayout>
         <template #header>
@@ -13,13 +7,22 @@ import CreateUserForm from "@/Pages/Users/Partials/CreateUserForm.vue";
         <div class="py-12">
             <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
                 <div class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                    <CreateUserForm></CreateUserForm>
+                    <CreateUserForm :roles = roles ></CreateUserForm>
                 </div>
             </div>
         </div>
     </AuthenticatedLayout>
 </template>
 
-<style scoped>
+<script setup>
 
-</style>
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import CreateUserForm from "@/Pages/Users/Partials/CreateUserForm.vue";
+defineProps({
+
+    roles: {
+        type: Object,
+    },
+});
+</script>
+
