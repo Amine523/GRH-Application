@@ -49,4 +49,8 @@ class User extends Authenticated
     {
         return $this->hasOne(Profile::class);
     }
+    public function team()
+    {
+        return $this->hasOne(Team::class);
+    }
 }

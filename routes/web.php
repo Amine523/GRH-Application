@@ -24,6 +24,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // for teams routing
+    Route::get('/teams', [\App\Http\Controllers\TeamController::class, 'index'])->name('teams.index');
+
     // for user routing
     Route::group(['middleware' => ['role:admin']], function () {
         Route::get('/users', [UserController::class, 'index'])->name('user.index');
@@ -33,6 +36,14 @@ Route::middleware('auth')->group(function () {
         Route::patch('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     });
+    // for teams routing
+    Route::get('/teams/create', [\App\Http\Controllers\TeamController::class, 'create'])->name('teams.create');
+    Route::post('/teams/store', [\App\Http\Controllers\TeamController::class, 'store'])->name('teams.store');
+    Route::delete('/teams/{team}', [\App\Http\Controllers\TeamController::class, 'destroy'])->name('teams.destroy');
+    Route::patch('/teams/{team}', [\App\Http\Controllers\TeamController::class, 'update'])->name('teams.update');
+    Route::get('/teams/{team}/edit', [\App\Http\Controllers\TeamController::class, 'edit'])->name('teams.edit');
+
+
 
 });
 

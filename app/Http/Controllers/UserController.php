@@ -46,11 +46,11 @@ class UserController extends Controller
     public function store(UserRequest $userRequest, ProfileUpdateRequest $profileUpdateRequest , UserRoleRequest $userRoleRequest)
     {
         $user = User::create([
-            'email' => $userRequest->validated()['email'],
+            'email' => $userRequest->email,
             'password' => Hash::make('password'),
         ]);
         $user->profile()->create($profileUpdateRequest->validated());
-        $user->assignRole($userRoleRequest->validated()['role_id']);
+        $user->assignRole($userRoleRequest->role_id);
 //        Mail::to($user->email)->send(new WelcomeNewUserMail($user));
         return to_route('user.index');
     }

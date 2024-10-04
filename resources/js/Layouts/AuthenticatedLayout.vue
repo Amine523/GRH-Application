@@ -49,6 +49,11 @@ const showingNavigationDropdown = ref(false);
                                     :active="route().current('user.index')">
                                     User List
                                 </NavLink>
+                                <NavLink
+                                    :href="route('teams.index')"
+                                    :active="route().current('teams.index')">
+                                    Teams
+                                </NavLink>
                             </div>
                         </div>
 
@@ -156,6 +161,22 @@ const showingNavigationDropdown = ref(false);
                             :active="route().current('dashboard')"
                         >
                             Dashboard
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('profile.edit')"
+                            :active="route().current('profile.edit')">
+                            Profile
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="$page.props.auth.user_roles[0] === 'admin'"
+                            :href="route('user.index')"
+                            :active="route().current('user.index')">
+                            User List
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('teams.index')"
+                            :active="route().current('teams.index')">
+                            Teams
                         </ResponsiveNavLink>
 
                     </div>
