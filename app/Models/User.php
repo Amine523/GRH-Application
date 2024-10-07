@@ -20,6 +20,8 @@ class User extends Authenticated
     protected $fillable = [
         'email',
         'password',
+        'valid_balance',
+        'team_id',
     ];
 
     /**

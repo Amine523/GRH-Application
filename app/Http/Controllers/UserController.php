@@ -8,6 +8,7 @@ use App\Http\Requests\UserRoleRequest;
 use App\Mail\UserAuth;
 use App\Mail\WelcomeNewUserMail;
 use App\Models\Role;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -28,6 +29,7 @@ class UserController extends Controller
             ->map(function ($user) {
                 return [
                     'id' => $user->id,
+                    'validBalance' => $user->valid_balance,
                     'profile' => $user->profile,
                     'roles' => $user->getRoleNames(),
                 ];
@@ -41,13 +43,15 @@ class UserController extends Controller
     }
 
     /**
-     * Store a newly created user in storage.
+     * Store a newly created team in storage.
      */
     public function store(UserRequest $userRequest, ProfileUpdateRequest $profileUpdateRequest , UserRoleRequest $userRoleRequest)
     {
         $user = User::create([
             'email' => $userRequest->email,
             'password' => Hash::make('password'),
+            'valide_balance' => 23,
+            'team_id' => $userRequest->team_id,
         ]);
         $user->profile()->create($profileUpdateRequest->validated());
         $user->assignRole($userRoleRequest->role_id);
@@ -56,13 +60,15 @@ class UserController extends Controller
     }
 
     /**
-     * Show the form for creating a new user.
+     * Show the form for creating a new team.
      */
     public function create(): Response
     {
         $roles = Role::all();
+        $teams = Team::all();
         return Inertia::render('Users/Create', [
             'roles' => $roles,
+            'teams' => $teams,
         ]);
     }
 

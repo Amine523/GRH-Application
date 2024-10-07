@@ -30,7 +30,7 @@ const addUser = () => {
                 <div class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
                     <div class="flex justify-end">
                         <PrimaryButton @click="addUser" class="bg-green-600 text-white">
-                            Add New Employed
+                            Add New User
                         </PrimaryButton>
                     </div>
                     <UserList :users="users"></UserList>

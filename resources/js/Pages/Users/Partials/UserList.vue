@@ -26,6 +26,18 @@
                     <p class="text-lg">{{ user?.profile?.address }}</p>
                 </div>
             </div>
+            <div v-if="isAdmin">
+                <div class="flex space-x-4">
+                    <div class="w-1/2">
+                        <p class="text-sm font-medium text-gray-700">Leave Balance</p>
+                        <p class="text-lg">{{ user?.validBalance }}</p>
+                    </div>
+                    <div class="w-1/2">
+                        <p class="text-sm font-medium text-gray-700">User Role</p>
+                        <p class="text-lg">{{ user?.roles[0] }}</p>
+                    </div>
+                </div>
+            </div>
 
             <div class="flex items-center gap-4">
 

@@ -98,6 +98,17 @@
                         label=""
                     />
                 </div>
+                <div>
+                    <InputLabel for="role_id" value="User Team"/>
+                    <SelectItems
+                        id="team_id"
+                        v-model="form.team_id"
+                        :options="teamsOptions"
+                        :error="form.errors.team_id"
+                        class="mt-1 block w-full"
+                        label=""
+                    />
+                </div>
             </div>
 
             <div class="flex items-center gap-4">
@@ -118,12 +129,19 @@ import {useForm, usePage} from '@inertiajs/vue3';
 import {useToast} from 'vue-toastification';
 import SelectItems from '@/Components/SelectItems.vue';
 
+const {roles, teams} = usePage().props;
 const toast = useToast();
-const { roles } = usePage().props;
-const roleOptions = roles.map(role => ({
-    value: role.name,
-    label: role.name
-}));
+const mapToOptions = (items, labelField, valueField = 'id') =>
+    items.map(item => ({
+        value: item[valueField],
+        label: item[labelField]
+    }));
+
+// Prepare role and team options
+const roleOptions = mapToOptions(roles, 'name','name');
+const teamsOptions = mapToOptions(teams, 'team_name');
+
+// Initialize form with default values
 const form = useForm({
     email: '',
     first_name: '',
@@ -131,17 +149,17 @@ const form = useForm({
     phone_number: '',
     address: '',
     role_id: '',
+    team_id: '',
+    valide_balance: '23',
 });
 
+// Create user function
 const createUser = () => {
     form.post(route('users.store'), {
         preserveScroll: true,
-        onSuccess: () => {
-            toast.success('User created successfully!');
-        },
-        onError: () => {
-            toast.error('There was an error creating the user.');
-        }
+        onSuccess: () => toast.success('User created successfully!'),
+        onError: () => toast.error('There was an error creating the user.')
     });
 };
 </script>
+

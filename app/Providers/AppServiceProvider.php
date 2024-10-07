@@ -4,7 +4,6 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Routing\UrlGenerator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -16,11 +15,11 @@ class AppServiceProvider extends ServiceProvider
         //
     }
 
-    public function boot(UrlGenerator $url): void
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
     {
-        $this->app->bind(ValidatePropertiesDataPipe::class, PrecognitivelyValidatePropertiesDataPipe::class);
-//        if (config('app.env') !== 'local') {
-        $url->forceScheme('https');
-//        }
+        Vite::prefetch(concurrency: 3);
     }
 }

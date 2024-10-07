@@ -39,10 +39,16 @@ class TeamController extends Controller
      */
     public function store(TeamRequest $teamRequest)
     {
-        Team::create([
+        $team = Team::create([
             'team_name' => $teamRequest->team_name,
             'project_manager_id' => $teamRequest->project_manager_id ,
         ]);
+
+        $projectManager = User::find($teamRequest->project_manager_id);
+        if (!$projectManager->team_id) {
+            $projectManager->team_id = $team->id;
+            $projectManager->save();
+        }
 
         return to_route('teams.index');
     }
@@ -59,11 +65,22 @@ class TeamController extends Controller
     }
 
     /**
-     * Show the form for editing the specified user.
+     * Show the form for editing the specified team.
      */
     public function edit(Team $team): Response
     {
         $projectManagerUsers = User::role('project_manager')->with('profile')->get();
+        $projectManager = User::find($team->project_manager_id);
+
+        if ($projectManager) {
+            if ($projectManager->team_id && $projectManager->team_id != $team->id) {
+                $projectManager->team_id = null;
+                $projectManager->save();
+            } else {
+                $projectManager->team_id = $team->id;
+                $projectManager->save();
+            }
+        }
 
         return Inertia::render('Teams/Edit', [
             'team' => $team,
