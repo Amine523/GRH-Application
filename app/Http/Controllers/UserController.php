@@ -45,7 +45,7 @@ class UserController extends Controller
     /**
      * Store a newly created team in storage.
      */
-    public function store(UserRequest $userRequest, ProfileUpdateRequest $profileUpdateRequest , UserRoleRequest $userRoleRequest)
+    public function store(UserRequest $userRequest, ProfileUpdateRequest $profileUpdateRequest, UserRoleRequest $userRoleRequest)
     {
         $user = User::create([
             'email' => $userRequest->email,
@@ -77,21 +77,35 @@ class UserController extends Controller
      */
     public function edit(User $user): Response
     {
-        $user->load('profile');
+        $roles = Role::all();
+        $teams = Team::all();
+        $user->load(['profile', 'roles']);
         return Inertia::render('Users/Edit', [
             'user' => $user,
+            'roles' => $roles,
+            'teams' => $teams,
         ]);
     }
 
     /**
      * Update the specified user in storage.
      */
-    public function update(ProfileUpdateRequest $request, User $user)
+    public function update(ProfileUpdateRequest $request, User $user, UserRoleRequest $userRoleRequest)
     {
+        $validatedRoleData = $userRoleRequest->validated();
+
         $user->profile()->updateOrCreate(
             ['user_id' => $user->id],
             $request->validated()
         );
+
+        if (isset($validatedRoleData['role_id'])) {
+            $role = Role::where('name', $validatedRoleData['role_id'])->first();
+            if ($role) {
+                $user->roles()->sync($role->id);
+            }
+        }
+
         return to_route('user.index');
     }
 

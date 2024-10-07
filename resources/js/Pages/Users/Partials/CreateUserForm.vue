@@ -2,16 +2,14 @@
     <section>
         <header>
             <h2 class="text-lg font-medium text-gray-900">
-                Create New User
+                {{ user ? 'Edit User' : 'Create New User' }}
             </h2>
         </header>
 
-        <form
-            @submit.prevent="createUser"
-            class="mt-3 space-y-3"
-        >
+        <form @submit.prevent="createUser" class="mt-3 space-y-3">
             <!-- Three form fields in one row -->
             <div class="grid grid-cols-3 gap-4">
+                <!-- Email -->
                 <div>
                     <InputLabel for="email" value="Email"/>
 
@@ -27,6 +25,7 @@
                     <InputError class="mt-2" :message="form.errors.email"/>
                 </div>
 
+                <!-- First Name -->
                 <div>
                     <InputLabel for="first_name" value="First Name"/>
 
@@ -42,6 +41,7 @@
                     <InputError class="mt-2" :message="form.errors.first_name"/>
                 </div>
 
+                <!-- Last Name -->
                 <div>
                     <InputLabel for="last_name" value="Last Name"/>
 
@@ -57,8 +57,9 @@
                 </div>
             </div>
 
-            <!-- Phone Number, Address, and Country in one row -->
+            <!-- Phone Number, Address, and Role -->
             <div class="grid grid-cols-3 gap-4">
+                <!-- Phone Number -->
                 <div>
                     <InputLabel for="phone_number" value="Phone Number"/>
 
@@ -73,6 +74,7 @@
                     <InputError class="mt-2" :message="form.errors.phone_number"/>
                 </div>
 
+                <!-- Address -->
                 <div>
                     <InputLabel for="address" value="Address"/>
 
@@ -87,6 +89,7 @@
                     <InputError class="mt-2" :message="form.errors.address"/>
                 </div>
 
+                <!-- Role -->
                 <div>
                     <InputLabel for="role_id" value="User Role"/>
                     <SelectItems
@@ -95,25 +98,28 @@
                         :options="roleOptions"
                         :error="form.errors.role_id"
                         class="mt-1 block w-full"
-                        label=""
-                    />
+                        label=""/>
                 </div>
+            </div>
+
+            <!-- Team -->
+            <div class="grid grid-cols-3 gap-4">
                 <div>
-                    <InputLabel for="role_id" value="User Team"/>
+                    <InputLabel for="team_id" value="User Team"/>
                     <SelectItems
                         id="team_id"
                         v-model="form.team_id"
                         :options="teamsOptions"
                         :error="form.errors.team_id"
                         class="mt-1 block w-full"
-                        label=""
-                    />
+                        label=""/>
                 </div>
             </div>
 
+            <!-- Submit Button -->
             <div class="flex items-center gap-4">
-                <PrimaryButton @click="createUser" class="bg-#082f49 text-white">
-                    Create New User
+                <PrimaryButton type="submit" class="bg-#082f49 text-white">
+                    {{ user ? 'Update User' : 'Create New User' }}
                 </PrimaryButton>
             </div>
         </form>
@@ -125,41 +131,47 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import {useForm, usePage} from '@inertiajs/vue3';
-import {useToast} from 'vue-toastification';
+import { useForm, usePage } from '@inertiajs/vue3';
+import { useToast } from 'vue-toastification';
 import SelectItems from '@/Components/SelectItems.vue';
 
-const {roles, teams} = usePage().props;
 const toast = useToast();
+const { roles, teams, user } = usePage().props;
+console.log(user);
+// Map roles and teams to options
 const mapToOptions = (items, labelField, valueField = 'id') =>
     items.map(item => ({
         value: item[valueField],
         label: item[labelField]
     }));
 
-// Prepare role and team options
-const roleOptions = mapToOptions(roles, 'name','name');
+const roleOptions = mapToOptions(roles, 'name', 'name');
 const teamsOptions = mapToOptions(teams, 'team_name');
 
-// Initialize form with default values
+// Initialize form with existing user data if editing
 const form = useForm({
-    email: '',
-    first_name: '',
-    last_name: '',
-    phone_number: '',
-    address: '',
-    role_id: '',
-    team_id: '',
-    valide_balance: '23',
+    email: user ? user.email : '',
+    first_name: user ? user.profile.first_name : '',
+    last_name: user ? user.profile.last_name : '',
+    phone_number: user ? user.profile.phone_number : '',
+    address: user ? user.profile.address : '',
+    role_id: user ? user.roles[0].name : '',
+    team_id: user ? user.team_id : '',
 });
 
-// Create user function
+// Function to handle form submission
 const createUser = () => {
-    form.post(route('users.store'), {
+    const routeName = user ? 'users.update' : 'users.store';
+    const method = user ? 'patch' : 'post';
+
+    form[method](route(routeName, { user: user ? user.id : null }), {
         preserveScroll: true,
-        onSuccess: () => toast.success('User created successfully!'),
-        onError: () => toast.error('There was an error creating the user.')
+        onSuccess: () => {
+            toast.success('User ' + (user ? 'updated' : 'created') + ' successfully!');
+        },
+        onError: () => {
+            toast.error('There was an error ' + (user ? 'updating' : 'creating') + ' the user.');
+        }
     });
 };
 </script>
-
