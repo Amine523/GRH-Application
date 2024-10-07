@@ -10,6 +10,7 @@ use App\Mail\WelcomeNewUserMail;
 use App\Models\Role;
 use App\Models\Team;
 use App\Models\User;
+use GuzzleHttp\Psr7\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
@@ -24,20 +25,20 @@ class UserController extends Controller
      */
     public function index(): Response
     {
-        $users = User::with('profile')
-            ->get()
-            ->map(function ($user) {
-                return [
-                    'id' => $user->id,
-                    'validBalance' => $user->valid_balance,
-                    'profile' => $user->profile,
-                    'roles' => $user->getRoleNames(),
-                ];
-            });
         $roles = Role::all();
+        $searchText = \request()->input('q') ?? '';
+        $users = User::with(['profile', 'roles']);
+
+        if ($searchText){
+            $users = $users->whereHas('profile',function ($query) use($searchText){
+                $query->whereAny(['first_name','last_name','phone_number'],'LIKE',"%$searchText%");
+            });
+        }
 
         return Inertia::render('Users/Index', [
-            'users' => $users,
+            'users' => $users->get([
+                'id','valid_balance'
+            ]),
             'roles' => $roles,
         ]);
     }

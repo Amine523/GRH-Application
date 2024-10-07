@@ -3,6 +3,15 @@
         <header>
             <h2 class="text-lg font-medium text-gray-900">User List</h2>
             <p class="mt-1 text-sm text-gray-600">Manage the list of users, edit or delete their information.</p>
+            <div class="flex items-end mt-2">
+                <FilterInput
+                    id="small-input"
+                    label="Filter Users"
+                    v-model="filterValue"
+                    placeholder="Type to filter users..."
+                    class="flex-grow"
+                />
+            </div>
         </header>
         <div v-for="user in users" :key="user.id" class="mt-3 space-y-3 p-4 border rounded-md shadow-md">
             <div class="flex space-x-4">
@@ -30,19 +39,18 @@
                 <div class="flex space-x-4">
                     <div class="w-1/2">
                         <p class="text-sm font-medium text-gray-700">Leave Balance</p>
-                        <p class="text-lg">{{ user?.validBalance }}</p>
+                        <p class="text-lg">{{ user?.valid_balance }}</p>
                     </div>
                     <div class="w-1/2">
                         <p class="text-sm font-medium text-gray-700">User Role</p>
-                        <p class="text-lg">{{ user?.roles[0] }}</p>
+                        <p class="text-lg">{{ user?.roles[0].name }}</p>
                     </div>
                 </div>
             </div>
 
             <div class="flex items-center gap-4">
-
                 <PrimaryButton :disabled="isAdmin(user)" @click="editUser(user.id)" class="bg-#082f49 text-white">
-                    edit
+                    Edit
                 </PrimaryButton>
 
                 <PrimaryButton :disabled="isAdmin(user)" @click="deleteUser(user.id)" class="bg-red-500 text-white">
@@ -52,17 +60,19 @@
         </div>
     </section>
 </template>
-
 <script setup>
-import {router} from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import {useToast} from "vue-toastification";
+import { useToast } from "vue-toastification";
 import "vue-toastification/dist/index.css";
+import FilterInput from "@/Components/FilterInput.vue";
+import { ref, watch } from "vue";
 
 defineProps({
     users: Array,
 });
 const toast = useToast();
+const filterValue = ref('');
 
 const deleteUser = (id) => {
     if (confirm('Are you sure you want to delete this user?')) {
@@ -77,7 +87,6 @@ const deleteUser = (id) => {
         });
     }
 };
-
 const editUser = (id) => {
     router.get(`/users/${id}/edit`);
 };
@@ -85,4 +94,18 @@ const isAdmin = (user) => {
     return user.roles.includes('admin')
 };
 
+const handleSearch = () => {
+    let url = new URL(route('user.index'));
+    url.searchParams.set('q', filterValue.value); // Use .value to access filterValue
+    router.visit(url, {
+        replace: true,
+        preserveScroll: true,
+        preserveState: true,
+        only: ['users'],
+    });
+};
+
+watch(filterValue, () => {
+    handleSearch();
+});
 </script>
