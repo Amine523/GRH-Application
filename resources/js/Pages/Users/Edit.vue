@@ -20,7 +20,6 @@
 <script setup>
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import UpdateUserInformationForm from "@/Pages/Users/Partials/UpdateUserInformationForm.vue";
 import CreateUserForm from "@/Pages/Users/Partials/CreateUserForm.vue";
 
 defineProps({
