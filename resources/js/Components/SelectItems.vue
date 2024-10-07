@@ -6,7 +6,7 @@
             v-model="internalModelValue"
             class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
         >
-            <option disabled value="" selected>Please select a role</option>
+            <option disabled value="" selected>Click to select</option>
             <option v-for="option in options" :key="option.value" :value="option.value">
                 {{ option.label }}
             </option>
@@ -17,7 +17,6 @@
 </template>
 
 <script setup>
-import InputLabel from "@/Components/InputLabel.vue";
 import InputError from "@/Components/InputError.vue";
 import {defineEmits} from "../../../.vite/deps/chunk-JSUVVRKD.js";
 import {ref, watch} from "vue";

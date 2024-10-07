@@ -22,10 +22,10 @@ class UserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'max:255'],
-            'password' => ['string', 'max:255'],
-            'valid_balance' => ['required|numeric|min:-999'],
-            'team_id' => ['numeric', 'max:255'],
+            'email' => 'required', 'string', 'max:255',
+            'password' => 'string', 'max:255',
+            'valid_balance' => 'numeric|min:-999',
+            'team_id' => 'nullable|exists:teams,id',
         ];
     }
 }

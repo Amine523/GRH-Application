@@ -10,6 +10,7 @@
                     v-model="filterValue"
                     placeholder="Type to filter users..."
                     class="flex-grow"
+                    @update:modelValue="handleSearch"
                 />
             </div>
         </header>
@@ -105,7 +106,7 @@ const handleSearch = () => {
     });
 };
 
-watch(filterValue, () => {
-    handleSearch();
-});
+// watch(filterValue, () => {
+//     handleSearch();
+// });
 </script>
