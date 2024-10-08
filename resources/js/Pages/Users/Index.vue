@@ -1,7 +1,5 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import UpdatePasswordForm from '/resources/js/Pages/Profile/Partials/UpdatePasswordForm.vue';
-import UpdateProfileInformationForm from '/resources/js/Pages/Profile/Partials/UpdateProfileInformationForm.vue';
 import {Head, router} from '@inertiajs/vue3'; // import router
 import UserList from "@/Pages/Users/Partials/UserList.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";

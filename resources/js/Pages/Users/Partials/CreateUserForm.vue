@@ -8,7 +8,40 @@
 
         <form @submit.prevent="createUser" class="mt-3 space-y-3">
             <!-- Three form fields in one row -->
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid gap-4">
+                <!-- First Name and Last Name -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <InputLabel for="first_name" value="First Name"/>
+
+                        <TextInput
+                            id="first_name"
+                            type="text"
+                            class="mt-1 block w-full"
+                            v-model="form.first_name"
+                            autofocus
+                            autocomplete="first_name"
+                        />
+
+                        <InputError class="mt-2" :message="form.errors.first_name"/>
+                    </div>
+
+                    <!-- Last Name -->
+                    <div>
+                        <InputLabel for="last_name" value="Last Name"/>
+
+                        <TextInput
+                            id="last_name"
+                            type="text"
+                            class="mt-1 block w-full"
+                            v-model="form.last_name"
+                            autocomplete="last_name"
+                        />
+
+                        <InputError class="mt-2" :message="form.errors.last_name"/>
+                    </div>
+                </div>
+
                 <!-- Email -->
                 <div>
                     <InputLabel for="email" value="Email"/>
@@ -25,102 +58,69 @@
                     <InputError class="mt-2" :message="form.errors.email"/>
                 </div>
 
-                <!-- First Name -->
-                <div>
-                    <InputLabel for="first_name" value="First Name"/>
+                <!-- Phone Number, Address, Role, and Team -->
+                <div class="grid grid-cols-4 gap-4">
+                    <!-- Phone Number -->
+                    <div>
+                        <InputLabel for="phone_number" value="Phone Number"/>
 
-                    <TextInput
-                        id="first_name"
-                        type="text"
-                        class="mt-1 block w-full"
-                        v-model="form.first_name"
-                        autofocus
-                        autocomplete="first_name"
-                    />
+                        <TextInput
+                            id="phone_number"
+                            type="tel"
+                            class="mt-1 block w-full"
+                            v-model="form.phone_number"
+                            autocomplete="phone"
+                        />
 
-                    <InputError class="mt-2" :message="form.errors.first_name"/>
+                        <InputError class="mt-2" :message="form.errors.phone_number"/>
+                    </div>
+
+                    <!-- Address -->
+                    <div>
+                        <InputLabel for="address" value="Address"/>
+
+                        <TextInput
+                            id="address"
+                            type="text"
+                            class="mt-1 block w-full"
+                            v-model="form.address"
+                            autocomplete="address"
+                        />
+
+                        <InputError class="mt-2" :message="form.errors.address"/>
+                    </div>
+
+                    <!-- Role -->
+                    <div>
+                        <InputLabel for="role_id" value="User Role"/>
+                        <SelectItems
+                            id="role_id"
+                            v-model="form.role_id"
+                            :options="roleOptions"
+                            :error="form.errors.role_id"
+                            class="mt-1 block w-full"
+                            label=""/>
+                    </div>
+
+                    <!-- Team -->
+                    <div>
+                        <InputLabel for="team_id" value="User Team"/>
+                        <SelectItems
+                            id="team_id"
+                            v-model="form.team_id"
+                            :options="teamsOptions"
+                            :error="form.errors.team_id"
+                            class="mt-1 block w-full"
+                            label=""/>
+                    </div>
                 </div>
 
-                <!-- Last Name -->
-                <div>
-                    <InputLabel for="last_name" value="Last Name"/>
-
-                    <TextInput
-                        id="last_name"
-                        type="text"
-                        class="mt-1 block w-full"
-                        v-model="form.last_name"
-                        autocomplete="last_name"
-                    />
-
-                    <InputError class="mt-2" :message="form.errors.last_name"/>
+                <!-- Submit Button -->
+                <div class="flex items-center gap-4">
+                    <PrimaryButton type="submit" class="bg-#082f49 text-white">
+                        {{ user ? 'Update User' : 'Create New User' }}
+                    </PrimaryButton>
                 </div>
-            </div>
-
-            <!-- Phone Number, Address, and Role -->
-            <div class="grid grid-cols-3 gap-4">
-                <!-- Phone Number -->
-                <div>
-                    <InputLabel for="phone_number" value="Phone Number"/>
-
-                    <TextInput
-                        id="phone_number"
-                        type="tel"
-                        class="mt-1 block w-full"
-                        v-model="form.phone_number"
-                        autocomplete="phone"
-                    />
-
-                    <InputError class="mt-2" :message="form.errors.phone_number"/>
-                </div>
-
-                <!-- Address -->
-                <div>
-                    <InputLabel for="address" value="Address"/>
-
-                    <TextInput
-                        id="address"
-                        type="text"
-                        class="mt-1 block w-full"
-                        v-model="form.address"
-                        autocomplete="address"
-                    />
-
-                    <InputError class="mt-2" :message="form.errors.address"/>
-                </div>
-
-                <!-- Role -->
-                <div>
-                    <InputLabel for="role_id" value="User Role"/>
-                    <SelectItems
-                        id="role_id"
-                        v-model="form.role_id"
-                        :options="roleOptions"
-                        :error="form.errors.role_id"
-                        class="mt-1 block w-full"
-                        label=""/>
-                </div>
-            </div>
-
-            <!-- Team -->
-            <div class="grid grid-cols-3 gap-4">
-                <div>
-                    <InputLabel for="team_id" value="User Team"/>
-                    <SelectItems
-                        id="team_id"
-                        v-model="form.team_id"
-                        :options="teamsOptions"
-                        :error="form.errors.team_id"
-                        class="mt-1 block w-full"
-                        label=""/>
-                </div>
-            </div>
-
-            <!-- Submit Button -->
-            <div class="flex items-center gap-4">
-                <PrimaryButton type="submit" class="bg-#082f49 text-white">
-                    {{ user ? 'Update User' : 'Create New User' }}
-                </PrimaryButton>
             </div>
         </form>
     </section>
@@ -131,13 +131,14 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { useForm, usePage } from '@inertiajs/vue3';
-import { useToast } from 'vue-toastification';
+import {useForm, usePage} from '@inertiajs/vue3';
+import {useToast} from 'vue-toastification';
 import SelectItems from '@/Components/SelectItems.vue';
 
 const toast = useToast();
-const { roles, teams, user } = usePage().props;
+const {roles, teams, user} = usePage().props;
 console.log(user);
+
 // Map roles and teams to options
 const mapToOptions = (items, labelField, valueField = 'id') =>
     items.map(item => ({
@@ -164,7 +165,7 @@ const createUser = () => {
     const routeName = user ? 'users.update' : 'users.store';
     const method = user ? 'patch' : 'post';
 
-    form[method](route(routeName, { user: user ? user.id : null }), {
+    form[method](route(routeName, {user: user ? user.id : null}), {
         preserveScroll: true,
         onSuccess: () => {
             toast.success('User ' + (user ? 'updated' : 'created') + ' successfully!');

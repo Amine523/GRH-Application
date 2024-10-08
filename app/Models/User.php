@@ -34,6 +34,21 @@ class User extends Authenticated
         'remember_token',
     ];
 
+    public function profile()
+    {
+        return $this->hasOne(Profile::class);
+    }
+
+    public function team()
+    {
+        return $this->hasOne(Team::class);
+    }
+
+    public function leaves()
+    {
+        return $this->hasMany(Leave::class);
+    }
+
     /**
      * Get the attributes that should be cast.
      *
@@ -45,14 +60,5 @@ class User extends Authenticated
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
-    }
-
-    public function profile()
-    {
-        return $this->hasOne(Profile::class);
-    }
-    public function team()
-    {
-        return $this->hasOne(Team::class);
     }
 }
