@@ -30,6 +30,7 @@ Route::middleware('auth')->group(function () {
 
     // for leave request
     Route::get('/Leave', [\App\Http\Controllers\LeaveController::class, 'index'])->name('leave.index');
+    Route::post('/Leave/store', [\App\Http\Controllers\LeaveController::class, 'store'])->name('leave.store');
 
     // for admin routing
     Route::group(['middleware' => ['role:admin']], function () {

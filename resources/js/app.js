@@ -2,11 +2,14 @@
 import '../css/app.css'; // Tailwind or custom CSS
 import './bootstrap'; // Laravel's bootstrap.js file for initializing dependencies
 // Import Syncfusion
-import "@syncfusion/ej2-base/styles/material.css";
-import "@syncfusion/ej2-buttons/styles/material.css";
-import "@syncfusion/ej2-vue-calendars/styles/material.css";
-
-import { CalendarComponent as EjsCalendar } from '@syncfusion/ej2-vue-calendars';
+import '@syncfusion/ej2-base/styles/material.css';
+import '@syncfusion/ej2-buttons/styles/material.css';
+import '@syncfusion/ej2-calendars/styles/material.css';
+import '@syncfusion/ej2-dropdowns/styles/material.css';
+import '@syncfusion/ej2-inputs/styles/material.css';
+import '@syncfusion/ej2-navigations/styles/material.css';
+import '@syncfusion/ej2-popups/styles/material.css';
+import '@syncfusion/ej2-vue-schedule/styles/material.css';
 // Import Inertia.js, Vue, and other libraries
 import { createInertiaApp } from '@inertiajs/vue3'; // Inertia.js for Vue 3
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'; // Inertia page resolution

@@ -19,7 +19,11 @@
     },
     "dependencies": {
         "@primevue/themes": "^4.1.0",
+        "@syncfusion/ej2-vue-buttons": "^27.1.51",
         "@syncfusion/ej2-vue-calendars": "^27.1.52",
+        "@syncfusion/ej2-vue-dropdowns": "^27.1.52",
+        "@syncfusion/ej2-vue-inputs": "^27.1.50",
+        "@syncfusion/ej2-vue-popups": "^27.1.50",
         "@syncfusion/ej2-vue-schedule": "^27.1.52",
         "@vuepic/vue-datepicker": "^9.0.3",
         "primeicons": "^7.0.0",
