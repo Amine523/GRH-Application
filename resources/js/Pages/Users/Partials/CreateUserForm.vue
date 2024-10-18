@@ -137,7 +137,6 @@ import SelectItems from '@/Components/SelectItems.vue';
 
 const toast = useToast();
 const {roles, teams, user} = usePage().props;
-console.log(user);
 
 // Map roles and teams to options
 const mapToOptions = (items, labelField, valueField = 'id') =>

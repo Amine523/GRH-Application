@@ -1,14 +1,19 @@
 <script>
-import { ref } from 'vue';
-import { DatePickerComponent } from '@syncfusion/ej2-vue-calendars';
-import { RadioButtonComponent } from '@syncfusion/ej2-vue-buttons';
-import { SliderComponent } from '@syncfusion/ej2-vue-inputs';
-import { DialogComponent } from '@syncfusion/ej2-vue-popups';
-import { ScheduleComponent, Day, Month, Agenda } from '@syncfusion/ej2-vue-schedule';
-import { DropDownListComponent } from '@syncfusion/ej2-vue-dropdowns';
+import {ref} from 'vue';
+import {DatePickerComponent} from '@syncfusion/ej2-vue-calendars';
+import {RadioButtonComponent} from '@syncfusion/ej2-vue-buttons';
+import {SliderComponent} from '@syncfusion/ej2-vue-inputs';
+import {DialogComponent} from '@syncfusion/ej2-vue-popups';
+import {ScheduleComponent, Day, Month, Agenda} from '@syncfusion/ej2-vue-schedule';
+import {DropDownListComponent} from '@syncfusion/ej2-vue-dropdowns';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
+import {Head, router} from '@inertiajs/vue3';
 import PrimaryButton from "@/Components/PrimaryButton.vue";
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import InputText from 'primevue/inputtext';
+import Tag from 'primevue/tag';
+import {useToast} from "vue-toastification";
 
 export default {
     name: "Index",
@@ -22,10 +27,16 @@ export default {
         'ejs-dropdownlist': DropDownListComponent,
         Head,
         AuthenticatedLayout,
+        DataTable,
+        Column,
+        InputText,
+        Tag
+
     },
     provide: {
         schedule: [Day, Month, Agenda]
     },
+
     data() {
         return {
             eventSettings: {
@@ -43,10 +54,30 @@ export default {
             team_user: null,
             users: [],
             mappedUsers: [],
+            selectedProducts: [],
+            filters: {
+                global: {value: ''}
+            },
         };
     },
     props: {
-        leaves: Array
+        leaves: Array,
+    },
+    computed: {
+        mappedLeaves() {
+            return this.leaves.map(leave => {
+                const user = this.users.find(user => user.id === leave.user_id);
+                return {
+                    id: leave.id,
+                    first_name: user ? user.profile.first_name : 'Unknown',
+                    last_name: user ? user.profile.last_name : 'User',
+                    start_day: leave.start_day,
+                    end_day: leave.end_day,
+                    type_of_leave: leave.type_of_leave,
+                    status_of_leave: leave.status_of_leave
+                };
+            });
+        }
     },
     created() {
         if (this.$attrs.auth.user_roles[0].includes('admin')) {
@@ -59,22 +90,55 @@ export default {
         this.users = this.$attrs.users;
         this.mappedUsers = this.mapToOptions(this.users, 'profile.first_name', 'id');
 
-        // Map leaves to the eventSettings.dataSource format
+        console.log(this.leaves) ;
         this.eventSettings.dataSource = this.leaves.map(leave => {
             const user = this.users.find(user => user.id === leave.user_id);
             const userName = user ? user.profile.first_name.toUpperCase() : 'Unknown User';
-            console.log(leave.status_of_leave);
             return {
                 Id: leave.id,
                 Subject: ` ${leave.type_of_leave} for  ${userName} Status : ${leave.status_of_leave.toUpperCase()}`,
                 StartTime: new Date(leave.start_day),
                 EndTime: new Date(leave.end_day),
                 Status: leave.status_of_leave,
+                FirstName: user?.profile?.first_name ?? '',
+                LastName: user?.profile?.last_name ?? '',
             };
         });
     },
     methods: {
+        approveLeave(leaveId) {
+            const leaveData = {
+                id: leaveId,
+                status_of_leave: 'approved',
+            };
+            const toast = useToast();
+            router.post(route('leave.approve'), leaveData)
+                .then(response => {
+                    this.refreshLeaves();
+                    toast.success('Leave approved successfully!');
+                })
+                .catch(error => {
+                    toast.error('There was an error approving the leave.');
+                });
+        },
 
+        refuseLeave(leaveId) {
+            const leaveData = {
+                id: leaveId,
+                status_of_leave: 'refused'
+            };
+            router.post(route('leave.refuse'), leaveData).then(response => {
+                this.refreshLeaves();
+            }).catch(error => {
+                console.error('Error refusing leave:', error);
+            });
+        },
+
+        refreshLeaves() {
+            router.get(route('leave.index')).then(response => {
+                this.leaves = response.data.leaves;
+            });
+        },
         mapToOptions(items, labelField, valueField = 'id') {
             return items.map(item => ({
                 value: item[valueField],
@@ -86,7 +150,7 @@ export default {
                 args.element.style.backgroundColor = 'orange';
             } else if (args.data.Status === 'approved') {
                 args.element.style.backgroundColor = 'green';
-            } else if (args.data.Status === 'refused') {
+            } else if (args.data.Status === 'rejected') {
                 args.element.style.backgroundColor = 'red';
             }
         },
@@ -115,7 +179,7 @@ export default {
             };
             router.post(route('leave.store'), leaveData);
             this.closeDialog();
-        }
+        },
     }
 }
 </script>
@@ -144,6 +208,65 @@ export default {
                         height="600px"
                         :eventRendered="onEventRender"
                     ></ejs-schedule>
+                </div>
+            </div>
+            <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8 py-5" v-if="isProjectManager || isAdmin">
+                <div class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
+                    <div class="mt-6">
+                        <h3 class="text-lg font-bold mb-4">Leave Requests</h3>
+                        <DataTable ref="dt" :value="mappedLeaves" dataKey="id" :paginator="true" :rows="10"
+                                   :filters="filters"
+                                   paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                                   :rowsPerPageOptions="[5, 10, 25]"
+                                   currentPageReportTemplate="Showing {first} to {last} of {totalRecords} leaves">
+
+                            <template #header>
+                                <div class="flex justify-content-end">
+            <span class="p-input-icon-left">
+                <InputText v-model="filters['global'].value" placeholder="Search for Leaves"/>
+            </span>
+                                </div>
+                            </template>
+
+                            <template #empty>
+                                <h4>No leaves found</h4>
+                            </template>
+
+                            <Column selectionMode="multiple" headerStyle="width: 3rem"/>
+                            <Column field="first_name" header="First Name" sortable/>
+                            <Column field="last_name" header="Last Name" sortable/>
+                            <Column field="start_day" header="Start Day" sortable/>
+                            <Column field="end_day" header="End Day" sortable/>
+                            <Column field="type_of_leave" header="Type of Leave" sortable/>
+                            <Column field="status_of_leave" header="Status of Leave" sortable bodyClass="text-center">
+                                <template #body="slotProps">
+                                    <Tag v-if="slotProps.data.status_of_leave === 'approved'" severity="success"
+                                         value="Approved"/>
+                                    <Tag v-else-if="slotProps.data.status_of_leave === 'pending'" severity="warn"
+                                         value="Pending"/>
+                                    <Tag v-else severity="danger" value="Refused"/>
+                                </template>
+                            </Column>
+                            <Column field="action" header="Action" bodyClass="text-center">
+                                <template #body="slotProps">
+                                    <template v-if="slotProps.data.status_of_leave === 'pending'">
+                                        <PrimaryButton
+                                            @click="approveLeave(slotProps.data.id)"
+                                            class="bg-green-600 text-white mr-2"
+                                        >
+                                            Accept
+                                        </PrimaryButton>
+                                        <PrimaryButton
+                                            @click="refuseLeave(slotProps.data.id)"
+                                            class="bg-red-600 text-white"
+                                        >
+                                            Refuse
+                                        </PrimaryButton>
+                                    </template>
+                                </template>
+                            </Column>
+                        </DataTable>
+                    </div>
                 </div>
             </div>
         </div>
@@ -234,5 +357,6 @@ export default {
                 </div>
             </div>
         </ejs-dialog>
+
     </AuthenticatedLayout>
 </template>

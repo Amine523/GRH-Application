@@ -52,6 +52,11 @@ Route::middleware('auth')->group(function () {
         // for leave Request
 
     });
+    Route::group(['middleware' => ['role:admin|project_manager']], function () {
+        Route::post('/Leave/approve', [\App\Http\Controllers\LeaveController::class, 'approve'])->name('leave.approve');
+        Route::post('/Leave/refuse', [\App\Http\Controllers\LeaveController::class, 'refuse'])->name('leave.refuse');
+    });
+
 });
 
 require __DIR__ . '/auth.php';

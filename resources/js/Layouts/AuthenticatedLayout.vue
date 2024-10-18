@@ -182,9 +182,8 @@ const showingNavigationDropdown = ref(false);
                         <ResponsiveNavLink
                             :href="route('leave.index')"
                             :active="route().current('leave.index')">
-                            Teams
+                            Leave Request
                         </ResponsiveNavLink>
-
                     </div>
 
                     <!-- Responsive Settings Options -->

@@ -4,17 +4,28 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\LeaveRequest;
 use App\Http\Requests\UserRequest;
+use App\Mail\LeaveRequestMail;
 use App\Models\Leave;
 use App\Models\Role;
 use App\Models\Team;
 use App\Models\User;
+use App\Repositories\LeaveRepository;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class LeaveController extends Controller
 {
+    protected $leaveRepository;
+
+    // Inject LeaveRepository via constructor
+    public function __construct(LeaveRepository $leaveRepository)
+    {
+        $this->leaveRepository = $leaveRepository;
+    }
+
     public function index(): Response
     {
         $user = auth()->user();
@@ -45,7 +56,7 @@ class LeaveController extends Controller
      */
     public function store(LeaveRequest $leaveRequest)
     {
-        $transformedStartDay =Carbon::parse($leaveRequest->start_day);
+        $transformedStartDay = Carbon::parse($leaveRequest->start_day);
         $transformedEndDay = Carbon::parse($leaveRequest->end_day);
 
         Leave::create([
@@ -55,6 +66,47 @@ class LeaveController extends Controller
             'end_day' => $transformedEndDay->format('Y/m/d'),
             'status_of_leave' => 'pending'
         ]);
+
+        return to_route('leave.index');
+    }
+
+    /**
+     * approve a new leave request.
+     */
+    public function approve()
+    {
+        $request = request()->all();
+        $leave = Leave::find($request['id']);
+        $validBalance = $leave->user->valid_balance;
+        $numberOfDays = $this->leaveRepository->getWeekdaysBetween($leave->start_day, $leave->end_day);
+
+        if ($validBalance >= $numberOfDays) {
+            $leave->user->valid_balance -= $numberOfDays;
+            $leave->status_of_leave = 'approved';
+            $leave->user->save();
+            $leave->save();
+
+            return to_route('leave.index')->with('success', 'Leave approved successfully.');
+        } else {
+            $leave->user->valid_balance -= $numberOfDays;
+            $leave->status_of_leave = 'approved';
+            $leave->user->save();
+            $leave->save();
+//            Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user));
+
+            return to_route('leave.index');
+        }
+    }
+
+    /**
+     * refuse a leave request
+     */
+    public function refuse()
+    {
+        $request = request()->all();
+        $leave = Leave::find($request['id']);
+        $leave->status_of_leave = 'rejected';
+        $leave->save();
 
         return to_route('leave.index');
     }
