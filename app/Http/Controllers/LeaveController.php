@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
+use function Psy\debug;
 
 class LeaveController extends Controller
 {
@@ -51,55 +52,90 @@ class LeaveController extends Controller
         ]);
     }
 
-    /**
-     * Store a new leave request.
-     */
     public function store(LeaveRequest $leaveRequest)
     {
         $transformedStartDay = Carbon::parse($leaveRequest->start_day);
-        $transformedEndDay = Carbon::parse($leaveRequest->end_day);
+        $transformedEndDay = ($leaveRequest->end_day == null) ? Carbon::parse($leaveRequest->start_day) : Carbon::parse($leaveRequest->end_day);
+        $numberOfDays = $this->leaveRepository->getWeekdaysBetween($transformedStartDay, $transformedEndDay);
+        $user = auth()->user();
+        $validBalance = $user->valid_balance;
+        $authorizationHours = $user->authorization_hours;
 
-        Leave::create([
-            'user_id' => $leaveRequest->user_id,
-            'type_of_leave' => $leaveRequest->type_of_leave,
-            'start_day' => $transformedStartDay->format('Y/m/d'),
-            'end_day' => $transformedEndDay->format('Y/m/d'),
-            'status_of_leave' => 'pending'
-        ]);
+        if ($leaveRequest->type_of_leave == 'authorization') {
 
-        return to_route('leave.index');
+            if ($authorizationHours >= $leaveRequest->authorizationHours) {
+                $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
+                return to_route('leave.index')->with('success', 'Authorization request submitted successfully.');
+            } else {
+                $admins = User::role('admin')->get();
+                $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
+                foreach ($admins as $admin) {
+                    Mail::to($admin->email)->send(new LeaveRequestMail($user));
+                }
+                return back()->with('error', 'Not enough authorization hours available.');
+            }
+        }
+
+        if ($validBalance >= $numberOfDays) {
+            $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
+            return to_route('leave.index')->with('success', 'Leave request submitted successfully.');
+        } else {
+            $admins = User::role('admin')->get();
+            $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
+            foreach ($admins as $admin) {
+                Mail::to($admin->email)->send(new LeaveRequestMail($user));
+            }
+            return back()->with('error', 'Not enough leave balance.');
+        }
     }
 
     /**
-     * approve a new leave request.
+     * Approve a leave request.
      */
     public function approve()
     {
-        $request = request()->all();
-        $leave = Leave::find($request['id']);
+
+        $request = request()->validate([
+            'id' => 'required|integer|exists:leaves,id',
+        ]);
+        $leave = Leave::with('user')->find($request['id']);
         $validBalance = $leave->user->valid_balance;
         $numberOfDays = $this->leaveRepository->getWeekdaysBetween($leave->start_day, $leave->end_day);
+        $daysToDeduct = match ($leave->type_of_leave) {
+            'halfday' => 0.5,
+            'authorisation' => 0,
+            default => $numberOfDays,
+        };
 
-        if ($validBalance >= $numberOfDays) {
-            $leave->user->valid_balance -= $numberOfDays;
+        if ($leave->type_of_leave === 'authorisation') {
+            if ($leave->user->authorization_hours >= $leave->authorization_hour) {
+                $leave->user->authorization_hours -= $leave->authorization_hour;
+                $leave->user->save();
+            } else {
+                return back()->with('error', 'Not enough authorization hours available.');
+            }
+        }
+
+        if ($leave->type_of_leave !== 'authorisation' && $validBalance >= $daysToDeduct) {
+            $leave->user->valid_balance -= $daysToDeduct;
             $leave->status_of_leave = 'approved';
             $leave->user->save();
             $leave->save();
 
             return to_route('leave.index')->with('success', 'Leave approved successfully.');
         } else {
-            $leave->user->valid_balance -= $numberOfDays;
+
+            Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user));
             $leave->status_of_leave = 'approved';
             $leave->user->save();
             $leave->save();
-//            Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user));
 
-            return to_route('leave.index');
+            return to_route('leave.index')->with('success', 'Leave approved successfully.');
         }
     }
 
     /**
-     * refuse a leave request
+     * Refuse a leave request.
      */
     public function refuse()
     {
@@ -108,6 +144,7 @@ class LeaveController extends Controller
         $leave->status_of_leave = 'rejected';
         $leave->save();
 
-        return to_route('leave.index');
+        return to_route('leave.index')->with('success', 'Leave request rejected successfully.');
     }
+
 }

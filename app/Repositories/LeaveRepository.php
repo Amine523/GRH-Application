@@ -2,12 +2,30 @@
 
 namespace App\Repositories;
 
+use App\Models\Leave;
 use DateTime;
 use DateInterval;
 use DatePeriod;
+use function Psy\debug;
 
 class LeaveRepository
 {
+    /**
+     * @param $data
+     * @return void
+     */
+    public function createLeave($data, $startDay, $endDate)
+    {
+        Leave::create([
+            'user_id' => $data->user_id,
+            'type_of_leave' => $data->type_of_leave,
+            'start_day' => $startDay->format('Y/m/d'),
+            'end_day' => $endDate->format('Y/m/d'),
+            'status_of_leave' => 'pending',
+            'authorization_hour' => (float)$data->authorisationHours,
+        ]);
+    }
+
     /**
      * Calculate the number of weekdays between two dates.
      *

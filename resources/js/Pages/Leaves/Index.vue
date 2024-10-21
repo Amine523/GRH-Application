@@ -90,7 +90,6 @@ export default {
         this.users = this.$attrs.users;
         this.mappedUsers = this.mapToOptions(this.users, 'profile.first_name', 'id');
 
-        console.log(this.leaves) ;
         this.eventSettings.dataSource = this.leaves.map(leave => {
             const user = this.users.find(user => user.id === leave.user_id);
             const userName = user ? user.profile.first_name.toUpperCase() : 'Unknown User';
@@ -109,7 +108,6 @@ export default {
         approveLeave(leaveId) {
             const leaveData = {
                 id: leaveId,
-                status_of_leave: 'approved',
             };
             const toast = useToast();
             router.post(route('leave.approve'), leaveData)
@@ -125,7 +123,6 @@ export default {
         refuseLeave(leaveId) {
             const leaveData = {
                 id: leaveId,
-                status_of_leave: 'refused'
             };
             router.post(route('leave.refuse'), leaveData).then(response => {
                 this.refreshLeaves();
@@ -335,15 +332,15 @@ export default {
 
                     <!-- Slider for authorisation hours -->
                     <div v-if="type_of_leave === 'authorisation'">
-                        <label>Authorisation Minute (0-120):</label>
+                        <label>Authorisation Hour (0-2) per Month:</label>
                         <ejs-slider
                             v-model="authorisationHours"
                             :min="0"
-                            :max="120"
-                            :step="15"
+                            :max="2"
+                            :step="0.5"
                         ></ejs-slider>
                         <!-- Display the current value of the slider -->
-                        <span>Current Minute: {{ authorisationHours }}</span>
+                        <span>Current Hours: {{ authorisationHours }}</span>
                     </div>
                 </div>
 

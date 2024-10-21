@@ -21,8 +21,8 @@ class LeaveRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'start_day' => ['required', 'date', 'after_or_equal:today'],
-            'end_day' => ['required_if:type_of_leave,vacation,sick', 'nullable', 'date', 'after_or_equal:start_day'],
+            'start_day' => 'required|date',
+            'end_day' => 'nullable|date|after_or_equal:start_day',
             'type_of_leave' => ['required', 'in:vacation,sick,authorisation,halfday'],
             'authorisationHours' => ['nullable', 'numeric', 'min:0', 'max:120'],
             'user_id' => ['nullable', 'numeric', 'min:0', 'max:120'],

@@ -15,7 +15,8 @@ class Leave extends Model
         'start_day',
         'end_day',
         'type_of_leave',
-        'status_of_leave'
+        'status_of_leave',
+        'authorization_hour'
     ];
 
     // Relation to the User model (one leave belongs to one user)

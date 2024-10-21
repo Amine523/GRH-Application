@@ -22,6 +22,7 @@ class User extends Authenticated
         'password',
         'valid_balance',
         'team_id',
+        'authorization_hours',
     ];
 
     /**
