@@ -37,11 +37,13 @@ const submit = () => {
                 id="background"
                 class="absolute -left-20 top-0 max-w-[877px]"
                 src="/images/background.svg"
+                style="z-index: -1;"
             />
             <img
                 id="background"
                 class="absolute -right-20 top-0 max-w-[877px] transform scale-x-[-1]"
                 src="/images/background.svg"
+                style="-1"
             />
             </div>
         <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
