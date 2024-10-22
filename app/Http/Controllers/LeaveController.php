@@ -29,6 +29,7 @@ class LeaveController extends Controller
 
     public function index(): Response
     {
+
         $user = auth()->user();
 
         if ($user->hasRole('admin')) {
