@@ -37,7 +37,7 @@
                 <tr>
                     <td class="email-content">
                         <!-- Logo section -->
-                        <img src="/images/logo-softtodo.png" alt="Company Logo" class="logo" width="150">
+                        <img src="https://gestion-conge.soft2do.de/images/logo-softtodo.png" alt="Company Logo" class="logo" width="150">
 
                         <!-- Email body -->
                         <h4>Bonjour {{ $user->email }},</h4>
