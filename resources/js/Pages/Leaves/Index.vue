@@ -31,7 +31,6 @@ export default {
         Column,
         InputText,
         Tag
-
     },
     provide: {
         schedule: [Day, Month, Agenda]
@@ -62,6 +61,7 @@ export default {
     },
     props: {
         leaves: Array,
+        user : Object,
     },
     computed: {
         mappedLeaves() {
@@ -197,7 +197,6 @@ export default {
                             Add Leave Request
                         </PrimaryButton>
                     </div>
-
                     <ejs-schedule
                         :event-settings="eventSettings"
                         :views="views"
