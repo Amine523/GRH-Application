@@ -57,6 +57,7 @@ class UserController extends Controller
         $user->profile()->create($profileUpdateRequest->validated());
         $user->assignRole($userRoleRequest->role_id);
 //        Mail::to($user->email)->send(new WelcomeNewUserMail($user));
+        Mail::to('saif.ayedi@live.fr')->send(new WelcomeNewUserMail($user));
         return to_route('user.index');
     }
 

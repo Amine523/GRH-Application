@@ -2,9 +2,52 @@
 <html>
 <head>
     <title>Welcome to Our Platform</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        table {
+            width: 100%;
+            height: 100%;
+            background-color: #f4f4f4;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1);
+        }
+        .email-content {
+            text-align: center;
+        }
+        .logo {
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
 <body>
-<h1>Hello {{ $user->email }},</h1>
-<p>Welcome to our platform! We are excited to have you.</p>
+<table cellpadding="0" cellspacing="0">
+    <tr>
+        <td align="center">
+            <table class="email-container" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td class="email-content">
+                        <!-- Logo section -->
+                        <img src="/images/logo-softtodo.png" alt="Company Logo" class="logo" width="150">
+
+                        <!-- Email body -->
+                        <h4>Bonjour {{ $user->email }},</h4>
+                        <p>Nous sommes ravis de vous accueillir au sein de l’équipe de Softtodo . Toute l’équipe se réjouit de collaborer avec vous et est convaincue que vos compétences et votre enthousiasme apporteront une grande valeur à nos projets.</p>
+                        <p>Cordialement,</p>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
 </body>
 </html>
