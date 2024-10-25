@@ -89,6 +89,20 @@
 
                         <InputError class="mt-2" :message="form.errors.address"/>
                     </div>
+                    <!-- Address -->
+                    <div v-if="user">
+                        <InputLabel for="valid_balance" value="Valid Balance"/>
+
+                        <TextInput
+                            id="valid_balance"
+                            type="text"
+                            class="mt-1 block w-full"
+                            v-model="form.valid_balance"
+                            autocomplete="valid_balance"
+                        />
+
+                        <InputError class="mt-2" :message="form.errors.valid_balance"/>
+                    </div>
 
                     <!-- Role -->
                     <div>
@@ -157,6 +171,7 @@ const form = useForm({
     address: user ? user.profile.address : '',
     role_id: user ? user.roles[0].name : '',
     team_id: user ? user.team_id : '',
+    valid_balance : user ? user.valid_balance : '',
 });
 
 // Function to handle form submission

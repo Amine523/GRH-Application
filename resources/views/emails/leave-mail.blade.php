@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Welcome to Our Platform</title>
+    <title> Information sur le solde de congé et sa clôture</title>
     <style>
         body {
             margin: 0;
@@ -40,8 +40,9 @@
                         <img src="https://gestion-conge.soft2do.de/images/logo-softtodo.png" alt="Company Logo" class="logo" width="150">
 
                         <!-- Email body -->
-                        <h4>Bonjour {{ $user->first_name }} {{ $user->last_name }},</h4>
-                        <p>Nous sommes ravis de vous accueillir au sein de l’équipe de Softtodo . Toute l’équipe se réjouit de collaborer avec vous et est convaincue que vos compétences et votre enthousiasme apporteront une grande valeur à nos projets.</p>
+                        <h4>Bonjour {{ $firstName }},</h4>
+                        <p>Suite à votre demande de congé, nous vous informons que celle-ci va être acceptée. Cependant, nous tenons à vous préciser que votre solde de congés actuels ne permet pas de couvrir la totalité des jours demandés. Votre solde de congés sera donc négatif, et ces jours supplémentaires seront considérés comme des congés non payés.
+                            Si vous avez des questions ou besoin d'informations complémentaires, n'hésitez pas à me contacter.</p>
                         <p>Cordialement.</p>
                     </td>
                 </tr>

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Welcome to Our Platform</title>
+    <title>Mise à jour de votre solde de congé</title>
     <style>
         body {
             margin: 0;
@@ -40,8 +40,9 @@
                         <img src="https://gestion-conge.soft2do.de/images/logo-softtodo.png" alt="Company Logo" class="logo" width="150">
 
                         <!-- Email body -->
-                        <h4>Bonjour {{ $user->first_name }} {{ $user->last_name }},</h4>
-                        <p>Nous sommes ravis de vous accueillir au sein de l’équipe de Softtodo . Toute l’équipe se réjouit de collaborer avec vous et est convaincue que vos compétences et votre enthousiasme apporteront une grande valeur à nos projets.</p>
+                        <h4>Bonjour {{ $userName }},</h4>
+                        <p>Nous vous informons que votre solde de congé a été mis à jour. Votre nouveau solde est de {{ $newBalance }} jours.</p><br>
+                        <p>Pour plus d'informations, vous pouvez contacter le service des Ressources Humaines.</p> <br>
                         <p>Cordialement.</p>
                     </td>
                 </tr>

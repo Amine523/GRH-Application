@@ -5,8 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Requests\UserRequest;
 use App\Http\Requests\UserRoleRequest;
+use App\Mail\BalanceUpdatedMail;
 use App\Mail\UserAuth;
-use App\Mail\WelcomeNewUserMail;
+use App\Mail\WarningUser;
 use App\Models\Role;
 use App\Models\Team;
 use App\Models\User;
@@ -57,7 +58,7 @@ class UserController extends Controller
         $user->profile()->create($profileUpdateRequest->validated());
         $user->assignRole($userRoleRequest->role_id);
 //        Mail::to($user->email)->send(new WelcomeNewUserMail($user));
-        Mail::to('saif.ayedi@live.fr')->send(new WelcomeNewUserMail($user));
+        Mail::to('saif.ayedi@live.fr')->send(new WarningUser($user));
         return to_route('user.index');
     }
 
@@ -89,24 +90,34 @@ class UserController extends Controller
         ]);
     }
 
+    public function warning(User $user)
+    {
+        Mail::to('saif.ayedi@live.fr')->send(new WarningUser($user->profile->first_name));
+        return to_route('user.index');
+    }
+
     /**
      * Update the specified user in storage.
      */
     public function update(ProfileUpdateRequest $request, User $user, UserRoleRequest $userRoleRequest)
     {
-        $validatedRoleData = $userRoleRequest->validated();
 
+        $validatedRoleData = $userRoleRequest->validated();
         $user->profile()->updateOrCreate(
             ['user_id' => $user->id],
             $request->validated()
         );
-
+        if ($userRoleRequest->valid_balance != $user->valid_balance) {
+            $user->update(['valid_balance' => $userRoleRequest->valid_balance]);
+            Mail::to('saif.ayedi@live.fr')->send(new BalanceUpdatedMail($user, $userRoleRequest->valid_balance));
+        }
         if (isset($validatedRoleData['role_id'])) {
             $role = Role::where('name', $validatedRoleData['role_id'])->first();
             if ($role) {
                 $user->roles()->sync($role->id);
             }
         }
+
 
         return to_route('user.index');
     }

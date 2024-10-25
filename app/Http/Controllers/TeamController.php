@@ -7,7 +7,7 @@ use App\Http\Requests\TeamRequest;
 use App\Http\Requests\UserRequest;
 use App\Http\Requests\UserRoleRequest;
 use App\Mail\UserAuth;
-use App\Mail\WelcomeNewUserMail;
+use App\Mail\WarningUser;
 use App\Models\Role;
 use App\Models\Team;
 use App\Models\User;

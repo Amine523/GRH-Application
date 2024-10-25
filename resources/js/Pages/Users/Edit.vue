@@ -1,3 +1,15 @@
+<script setup>
+
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import CreateUserForm from "@/Pages/Users/Partials/CreateUserForm.vue";
+
+defineProps({
+
+    user: {
+        type: Object,
+    },
+});
+</script>
 
 <template>
     <Head title="Edit User"/>
@@ -16,16 +28,3 @@
         </div>
     </AuthenticatedLayout>
 </template>
-
-<script setup>
-
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import CreateUserForm from "@/Pages/Users/Partials/CreateUserForm.vue";
-
-defineProps({
-
-    user: {
-        type: Object,
-    },
-});
-</script>

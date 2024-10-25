@@ -23,6 +23,7 @@ class UserRoleRequest extends FormRequest
     {
         return [
             'role_id' => ['required', 'string', 'max:255'],
+            'valid_balance' => ['string', 'max:255'],
         ];
     }
 }

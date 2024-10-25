@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
@@ -9,18 +10,51 @@ class LeaveRequestMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $user;
+    public $firstName;
+    public $messageType;
 
-    public function __construct($user)
+    public function __construct($firstName, $messageType = 'default')
     {
-        $this->user = $user;
+        $this->firstName = $firstName;
+        $this->messageType = $messageType;
     }
 
     public function build()
     {
-        return $this->view('emails.welcome')
-            ->subject('Welcome to Softtodo')
-            ->with(['user' => $this->user]);
+
+        return match ($this->messageType) {
+            'approved-extra' => $this->view('emails.leave-mail')
+                ->subject('Information sur le solde de congé et sa clôture')
+                ->with([
+                    'firstName' => $this->firstName,
+                ]),
+            'approved' => $this->view('emails.leave-accepted')
+                ->subject('Demande de congé Apprové')
+                ->with([
+                    'firstName' => $this->firstName,
+                ]),
+
+            'rejected' => $this->view('emails.leave-rejected')
+                ->subject('Demande de congé refusée')
+                ->with([
+                    'firstName' => $this->firstName,
+                ]),
+            'approved-authorisation' => $this->view('emails.leave-authorisation-approved')
+                ->subject('Demande de authorisation accepteé')
+                ->with([
+                    'firstName' => $this->firstName,
+                ]),
+            'rejected-authorisation' => $this->view('emails.leave-authorisation-rejected')
+                ->subject('Demande de authorisation refusée')
+                ->with([
+                    'firstName' => $this->firstName,
+                ]),
+
+            default => $this->view('emails.leave-default')
+                ->subject('Information sur le solde de congé et sa clôture')
+                ->with([
+                    'firstName' => $this->firstName,
+                ]),
+        };
     }
 }
-

@@ -57,6 +57,9 @@
                 <PrimaryButton :disabled="isAdmin(user)" @click="deleteUser(user.id)" class="bg-red-500 text-white">
                     Delete
                 </PrimaryButton>
+                <PrimaryButton :disabled="isAdmin(user)" @click="warning(user.id)" class="bg-amber-400 text-white">
+                    Warn
+                </PrimaryButton>
             </div>
         </div>
     </section>
@@ -88,6 +91,9 @@ const deleteUser = (id) => {
         });
     }
 };
+const warning = (id) => {
+    router.post(`/users/${id}/warning`);
+}
 const editUser = (id) => {
     router.get(`/users/${id}/edit`);
 };
