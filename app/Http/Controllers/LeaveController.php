@@ -71,7 +71,7 @@ class LeaveController extends Controller
                 $admins = User::role('admin')->get();
                 $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
                 foreach ($admins as $admin) {
-                    Mail::to($admin->email)->send(new LeaveRequestMail($user));
+                    Mail::to($admin->email)->send(new LeaveRequestMail($user,'approved-authorisation'));
                 }
                 return back()->with('error', 'Not enough authorization hours available.');
             }
@@ -84,7 +84,7 @@ class LeaveController extends Controller
             $admins = User::role('admin')->get();
             $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
             foreach ($admins as $admin) {
-                Mail::to('saif.ayedi@live.fr')->send(new LeaveRequestMail($user->first_name));
+                Mail::to('saif.ayedi@live.fr')->send(new LeaveRequestMail($user->first_name,'approved-extra'));
             }
             return back()->with('error', 'Not enough leave balance.');
         }
