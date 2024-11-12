@@ -24,7 +24,6 @@ class UserRequest extends FormRequest
         return [
             'email' => 'required', 'string', 'max:255',
             'password' => 'string', 'max:255',
-            'valid_balance' => 'numeric|min:-999',
             'authorization_hours' => 'numeric|min:-999',
             'team_id' => 'nullable|exists:teams,id',
         ];

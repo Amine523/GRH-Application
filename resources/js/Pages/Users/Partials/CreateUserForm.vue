@@ -90,7 +90,7 @@
                         <InputError class="mt-2" :message="form.errors.address"/>
                     </div>
                     <!-- Address -->
-                    <div v-if="user">
+                    <div>
                         <InputLabel for="valid_balance" value="Valid Balance"/>
 
                         <TextInput
