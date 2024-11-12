@@ -8,6 +8,7 @@ use App\Http\Requests\UserRoleRequest;
 use App\Mail\BalanceUpdatedMail;
 use App\Mail\UserAuth;
 use App\Mail\WarningUser;
+use App\Mail\WelcomeNewUserMail;
 use App\Models\Role;
 use App\Models\Team;
 use App\Models\User;
@@ -57,8 +58,7 @@ class UserController extends Controller
         ]);
         $user->profile()->create($profileUpdateRequest->validated());
         $user->assignRole($userRoleRequest->role_id);
-//        Mail::to($user->email)->send(new WelcomeNewUserMail($user));
-        Mail::to('saif.ayedi@live.fr')->send(new WarningUser($user));
+        Mail::to('saif.ayedi@live.fr')->send(new WelcomeNewUserMail($user));
         return to_route('user.index');
     }
 
