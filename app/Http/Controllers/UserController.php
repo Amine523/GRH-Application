@@ -99,14 +99,20 @@ class UserController extends Controller
     /**
      * Update the specified user in storage.
      */
-    public function update(ProfileUpdateRequest $request, User $user, UserRoleRequest $userRoleRequest)
+    public function update(ProfileUpdateRequest $request, User $user, UserRoleRequest $userRoleRequest,UserRequest $userRequest)
     {
 
         $validatedRoleData = $userRoleRequest->validated();
+        $userRequest = $userRequest->validated();
         $user->profile()->updateOrCreate(
             ['user_id' => $user->id],
             $request->validated()
         );
+        $user->updateOrCreate(
+            ['id' => $user->id],
+            $userRequest
+        );
+
         if ($userRoleRequest->valid_balance != $user->valid_balance) {
             $user->update(['valid_balance' => $userRoleRequest->valid_balance]);
             Mail::to('saif.ayedi@live.fr')->send(new BalanceUpdatedMail($user, $userRoleRequest->valid_balance));
