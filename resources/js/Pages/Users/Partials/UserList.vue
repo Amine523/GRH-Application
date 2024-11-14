@@ -14,56 +14,70 @@
                 />
             </div>
         </header>
-        <div v-for="user in users" :key="user.id" class="mt-3 space-y-3 p-4 border rounded-md shadow-md">
-            <!-- First Row: First Name, Last Name, Phone Number -->
-            <div class="flex space-x-4">
-                <div class="w-1/3">
-                    <p class="text-sm font-medium text-gray-700">First Name</p>
-                    <p class="text-lg">{{ user?.profile?.first_name }}</p>
-                </div>
-                <div class="w-1/3">
-                    <p class="text-sm font-medium text-gray-700">Last Name</p>
-                    <p class="text-lg">{{ user?.profile?.last_name }}</p>
-                </div>
-
-                <div class="w-1/3">
-                    <p class="text-sm font-medium text-gray-700">Email</p>
-                    <p class="text-lg">{{ user?.email }}</p>
-                </div>
-            </div>
-
-            <!-- Second Row: Email, Leave Balance, User Role -->
-            <div class="flex space-x-4 mt-4">
-                <div class="w-1/3">
-                    <p class="text-sm font-medium text-gray-700">Phone Number</p>
-                    <p class="text-lg">{{ user?.profile?.phone_number }}</p>
-                </div>
-                <div class="w-1/3" v-if="isAdmin">
-                    <p class="text-sm font-medium text-gray-700">Leave Balance</p>
-                    <p class="text-lg">{{ user?.valid_balance }}</p>
-                </div>
-                <div class="w-1/3" v-if="isAdmin">
-                    <p class="text-sm font-medium text-gray-700">User Role</p>
-                    <p class="text-lg">{{ user?.roles[0].name }}</p>
-                </div>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="flex items-center gap-4 mt-4">
-                <PrimaryButton :disabled="isAdmin(user)" @click="editUser(user.id)" class="bg-#082f49 text-white">
-                    Edit
-                </PrimaryButton>
-                <PrimaryButton :disabled="isAdmin(user)" @click="warning(user.id)" class="bg-amber-400 text-white">
-                    Warn
-                </PrimaryButton>
-                <PrimaryButton :disabled="isAdmin(user)" @click="deleteUser(user.id)" class="bg-red-500 text-white">
-                    Delete
-                </PrimaryButton>
-            </div>
+        <div class="relative overflow-x-auto">
+            <table class="w-full text-sm text-left text-gray-500">
+                <tbody>
+                <tr v-for="user in users" :key="user.id" class="hover:bg-gray-50 transition duration-200 border-b">
+                    <th scope="row" class="flex items-center px-6 py-4 text-gray-900 whitespace-nowrap">
+                        <img class="w-12 h-12 rounded-full" :src="user.profile.profile_picture" alt="profile image">
+                        <div class="ps-3">
+                            <div class="text-base font-semibold">{{ user?.profile?.first_name }}
+                                {{ user?.profile?.last_name }}
+                            </div>
+                            <div class="font-normal text-gray-500">{{ user?.email }}</div>
+                        </div>
+                    </th>
+                    <td class="px-6 py-4">
+                        {{ user?.roles[0].name }}
+                    </td>
+                    <td class="px-6 py-4">
+                        {{ user?.profile?.phone_number }}
+                    </td>
+                    <td class="px-6 py-4">
+                        {{ user?.valid_balance }}
+                    </td>
+                    <td class="px-6 py-4">
+                        {{ user?.profile?.address }}
+                    </td>
+                    <td class="px-2 py-2">
+                        <a @click="editUser(user.id)" class="font-medium text-blue-600 hover:underline">
+                            <img src="/images/edit.svg" alt="" width="20px" class="svg">
+                        </a>
+                    </td>
+                    <td class="px-2 py-2">
+                        <a @click="deleteUser(user.id)" class="font-medium text-blue-600 hover:underline">
+                            <img src="/images/delete.svg" alt="" width="20px" class="svg">
+                        </a>
+                    </td>
+                    <td class="px-2 py-2">
+                        <a @click="warning(user.id)" class="font-medium text-blue-600 hover:underline">
+                            <img src="/images/warning.svg" alt="" width="23px" class="svg">
+                        </a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
         </div>
-
     </section>
 </template>
+
+<style scoped>
+/* Add a border on table rows */
+tr {
+    border-bottom: 1px solid #e5e7eb; /* Tailwind's gray-200 */
+}
+
+/* Make the row hover effect smooth */
+tr:hover {
+    transition: background-color 0.2s ease-in-out;
+    transform: translateY(2px);
+}
+
+/* Make the cursor a pointer when hovering over .svg images */
+.svg:hover {
+    cursor: pointer;
+}
+</style>
 <script setup>
 import { router } from '@inertiajs/vue3';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -111,8 +125,4 @@ const handleSearch = () => {
         only: ['users'],
     });
 };
-
-// watch(filterValue, () => {
-//     handleSearch();
-// });
 </script>

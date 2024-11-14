@@ -15,6 +15,7 @@ use App\Models\User;
 use GuzzleHttp\Psr7\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,15 +32,15 @@ class UserController extends Controller
         $searchText = \request()->input('q') ?? '';
         $users = User::with(['profile', 'roles']);
 
-        if ($searchText){
-            $users = $users->whereHas('profile',function ($query) use($searchText){
-                $query->whereAny(['first_name','last_name','phone_number'],'LIKE',"%$searchText%");
+        if ($searchText) {
+            $users = $users->whereHas('profile', function ($query) use ($searchText) {
+                $query->whereAny(['first_name', 'last_name', 'phone_number'], 'LIKE', "%$searchText%");
             });
         }
 
         return Inertia::render('Users/Index', [
             'users' => $users->get([
-                'id','valid_balance','email',
+                'id', 'valid_balance', 'email',
             ]),
             'roles' => $roles,
         ]);
@@ -50,13 +51,16 @@ class UserController extends Controller
      */
     public function store(UserRequest $userRequest, ProfileUpdateRequest $profileUpdateRequest, UserRoleRequest $userRoleRequest)
     {
+        $fileUpload = $profileUpdateRequest->file('profile_picture')->store('profile_pictures', 'public');
+        $filePath = Storage::url($fileUpload);
         $user = User::create([
             'email' => $userRequest->email,
             'password' => Hash::make('password'),
             'valide_balance' => 23,
             'team_id' => $userRequest->team_id,
         ]);
-        $user->profile()->create($profileUpdateRequest->validated());
+
+        $user->profile()->create([...$profileUpdateRequest->validated(),'profile_picture'=>$filePath]);
         $user->assignRole($userRoleRequest->role_id);
         Mail::to('saif.ayedi@live.fr')->send(new WelcomeNewUserMail($user));
         return to_route('user.index');
@@ -99,7 +103,7 @@ class UserController extends Controller
     /**
      * Update the specified user in storage.
      */
-    public function update(ProfileUpdateRequest $request, User $user, UserRoleRequest $userRoleRequest,UserRequest $userRequest)
+    public function update(ProfileUpdateRequest $request, User $user, UserRoleRequest $userRoleRequest, UserRequest $userRequest)
     {
 
         $validatedRoleData = $userRoleRequest->validated();
@@ -112,7 +116,6 @@ class UserController extends Controller
             ['id' => $user->id],
             $userRequest
         );
-
         if ($userRoleRequest->valid_balance != $user->valid_balance) {
             $user->update(['valid_balance' => $userRoleRequest->valid_balance]);
             Mail::to('saif.ayedi@live.fr')->send(new BalanceUpdatedMail($user, $userRoleRequest->valid_balance));

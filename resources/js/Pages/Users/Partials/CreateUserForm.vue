@@ -127,6 +127,10 @@
                             class="mt-1 block w-full"
                             label=""/>
                     </div>
+                    <div>
+                        <InputLabel for="file" value="Profile Picture"/>
+                        <input type="file" @input="form.profile_picture = $event.target.files[0]" />
+                    </div>
                 </div>
 
                 <!-- Submit Button -->
@@ -172,6 +176,7 @@ const form = useForm({
     role_id: user ? user.roles[0].name : '',
     team_id: user ? user.team_id : '',
     valid_balance : user ? user.valid_balance : '',
+    profile_picture: null,
 });
 
 // Function to handle form submission
