@@ -15,45 +15,44 @@
             </div>
         </header>
         <div v-for="user in users" :key="user.id" class="mt-3 space-y-3 p-4 border rounded-md shadow-md">
+            <!-- First Row: First Name, Last Name, Phone Number -->
             <div class="flex space-x-4">
-                <div class="w-1/2">
+                <div class="w-1/3">
                     <p class="text-sm font-medium text-gray-700">First Name</p>
                     <p class="text-lg">{{ user?.profile?.first_name }}</p>
                 </div>
-                <div class="w-1/2">
+                <div class="w-1/3">
                     <p class="text-sm font-medium text-gray-700">Last Name</p>
                     <p class="text-lg">{{ user?.profile?.last_name }}</p>
                 </div>
+
+                <div class="w-1/3">
+                    <p class="text-sm font-medium text-gray-700">Email</p>
+                    <p class="text-lg">{{ user?.email }}</p>
+                </div>
             </div>
 
-            <div class="flex space-x-4">
-                <div class="w-1/2">
+            <!-- Second Row: Email, Leave Balance, User Role -->
+            <div class="flex space-x-4 mt-4">
+                <div class="w-1/3">
                     <p class="text-sm font-medium text-gray-700">Phone Number</p>
                     <p class="text-lg">{{ user?.profile?.phone_number }}</p>
                 </div>
-                <div class="w-1/2">
-                    <p class="text-sm font-medium text-gray-700">Address</p>
-                    <p class="text-lg">{{ user?.profile?.address }}</p>
+                <div class="w-1/3" v-if="isAdmin">
+                    <p class="text-sm font-medium text-gray-700">Leave Balance</p>
+                    <p class="text-lg">{{ user?.valid_balance }}</p>
                 </div>
-            </div>
-            <div v-if="isAdmin">
-                <div class="flex space-x-4">
-                    <div class="w-1/2">
-                        <p class="text-sm font-medium text-gray-700">Leave Balance</p>
-                        <p class="text-lg">{{ user?.valid_balance }}</p>
-                    </div>
-                    <div class="w-1/2">
-                        <p class="text-sm font-medium text-gray-700">User Role</p>
-                        <p class="text-lg">{{ user?.roles[0].name }}</p>
-                    </div>
+                <div class="w-1/3" v-if="isAdmin">
+                    <p class="text-sm font-medium text-gray-700">User Role</p>
+                    <p class="text-lg">{{ user?.roles[0].name }}</p>
                 </div>
             </div>
 
-            <div class="flex items-center gap-4">
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-4 mt-4">
                 <PrimaryButton :disabled="isAdmin(user)" @click="editUser(user.id)" class="bg-#082f49 text-white">
                     Edit
                 </PrimaryButton>
-
                 <PrimaryButton :disabled="isAdmin(user)" @click="deleteUser(user.id)" class="bg-red-500 text-white">
                     Delete
                 </PrimaryButton>
@@ -62,6 +61,7 @@
                 </PrimaryButton>
             </div>
         </div>
+
     </section>
 </template>
 <script setup>

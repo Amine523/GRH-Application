@@ -34,8 +34,7 @@ const props = defineProps({
     teams: {
         type: Object,
     },
-    users: Array,
-    auth: Object, // Ensure to receive the auth prop
+    auth: Object,
 });
 
 const isAdmin = props.auth.user.roles.some(role => role.name === 'admin');

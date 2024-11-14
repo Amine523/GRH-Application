@@ -39,7 +39,7 @@ class UserController extends Controller
 
         return Inertia::render('Users/Index', [
             'users' => $users->get([
-                'id','valid_balance'
+                'id','valid_balance','email',
             ]),
             'roles' => $roles,
         ]);

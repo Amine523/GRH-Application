@@ -25,15 +25,32 @@ class TeamController extends Controller
      */
     public function index(): Response
     {
-        $teams = Team::with('projectManager.profile')->get();
-        $projectManagerUsers = User::role('project_manager')->with('profile')->get();
+        $teams = Team::all()->load(['projectManager.profile', 'users.profile']);
+        $formattedTeams = $teams->map(function ($team) {
+            return [
+                'id' => $team->id,
+                'team_name' => $team->team_name,
+                'project_manager' => $team->projectManager ? [
+                    'id' => $team->projectManager->id,
+                    'first_name' => $team->projectManager->profile->first_name,
+                    'last_name' => $team->projectManager->profile->last_name,
+                ] : null,
+                'members' => $team->users->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'first_name' => $user->profile->first_name,
+                        'last_name' => $user->profile->last_name,
+                        'valid_balance' => $user->valid_balance,
+                        'authorization_hours' => $user->authorization_hours,
+                    ];
+                }),
+            ];
+        });
 
         return Inertia::render('Teams/Index', [
-            'teams' => $teams,
-            'projectManagerUsers' => $projectManagerUsers,
+            'teams' => $formattedTeams,
         ]);
     }
-
     /**
      * Store a newly created user in storage.
      */
