@@ -8,6 +8,9 @@
             padding: 0;
             font-family: Arial, sans-serif;
         }
+        b {
+            text-decoration: underline;
+        }
         table {
             width: 100%;
             height: 100%;
@@ -42,6 +45,7 @@
                         <!-- Email body -->
                         <h4>Bonjour {{ $firstName }},</h4>
                         <p>Suite à votre demande de congé, nous vous informons que celle-ci a été refusée.</p>
+                        <p><b>Reason : </b>{{ $reason }}</p>
                         <p>Si vous avez des questions ou besoin de plus d'informations, n'hésitez pas à nous contacter.</p>
                         <p>Cordialement.</p>
                     </td>

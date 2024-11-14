@@ -36,15 +36,12 @@ class LeaveController extends Controller
             $leaves = Leave::with('user')->get();
             $users = User::with('profile')->get();
 
-        } elseif ($user->hasRole('project_manager')) {
+        } else {
             // Get the team associated with the project manager and eager load users with their profiles
             $team = Team::with(['users.profile'])->find($user->team_id); // Eager load the profile relationship
             $users = $team->users; // This will give you the users in the team
             $userIds = $users->pluck('id'); // Extract user IDs
             $leaves = Leave::with('user')->whereIn('user_id', $userIds)->get();
-        } else {
-            $leaves = Leave::where('user_id', $user->id)->get();
-            $users = [];
         }
 
         return Inertia::render('Leaves/Index', [
@@ -55,8 +52,8 @@ class LeaveController extends Controller
 
     public function store(LeaveRequest $leaveRequest)
     {
-        $transformedStartDay = Carbon::parse($leaveRequest->start_day);
-        $transformedEndDay = ($leaveRequest->end_day == null) ? Carbon::parse($leaveRequest->start_day) : Carbon::parse($leaveRequest->end_day);
+        $transformedStartDay = Carbon::parse($leaveRequest->start_day)->addDay();
+        $transformedEndDay = ($leaveRequest->end_day == null) ? Carbon::parse($leaveRequest->start_day)->addDay() : Carbon::parse($leaveRequest->end_day)->addDay();
         $numberOfDays = $this->leaveRepository->getWeekdaysBetween($transformedStartDay, $transformedEndDay);
         $user = auth()->user();
         $validBalance = $user->valid_balance;
@@ -71,7 +68,7 @@ class LeaveController extends Controller
                 $admins = User::role('admin')->get();
                 $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
                 foreach ($admins as $admin) {
-                    Mail::to($admin->email)->send(new LeaveRequestMail($user,'approved-authorisation'));
+                    Mail::to($admin->email)->send(new LeaveRequestMail($user, 'approved-authorisation'));
                 }
                 return back()->with('error', 'Not enough authorization hours available.');
             }
@@ -84,7 +81,7 @@ class LeaveController extends Controller
             $admins = User::role('admin')->get();
             $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
             foreach ($admins as $admin) {
-                Mail::to('saif.ayedi@live.fr')->send(new LeaveRequestMail($user->first_name,'approved-extra'));
+                Mail::to('saif.ayedi@live.fr')->send(new LeaveRequestMail($user->first_name, 'approved-extra'));
             }
             return back()->with('error', 'Not enough leave balance.');
         }
@@ -111,10 +108,10 @@ class LeaveController extends Controller
             if ($leave->user->authorization_hours >= $leave->authorization_hour) {
                 $leave->user->authorization_hours -= $leave->authorization_hour;
                 $leave->user->save();
-                Mail::to('saif.ayedi@live.fr')->send(new LeaveRequestMail($leave->user->profile->first_name,'approved-authorisation'));
+                Mail::to('saif.ayedi@live.fr')->send(new LeaveRequestMail($leave->user->profile->first_name, 'approved-authorisation'));
 
             } else {
-                Mail::to('saif.ayedi@live.fr')->send(new LeaveRequestMail($leave->user->profile->first_name,'rejected-authorisation'));
+                Mail::to('saif.ayedi@live.fr')->send(new LeaveRequestMail($leave->user->profile->first_name, 'rejected-authorisation'));
                 return back()->with('error', 'Not enough authorization hours available.');
             }
         }
@@ -131,7 +128,7 @@ class LeaveController extends Controller
             $leave->status_of_leave = 'approved';
             $leave->user->save();
             $leave->save();
-            Mail::to('saif.ayedi@live.fr')->send(new LeaveRequestMail($leave->user->profile->first_name,'approved-extra'));
+            Mail::to('saif.ayedi@live.fr')->send(new LeaveRequestMail($leave->user->profile->first_name, 'approved-extra'));
 
             return to_route('leave.index')->with('success', 'Leave approved successfully.');
         }
@@ -144,10 +141,10 @@ class LeaveController extends Controller
     {
         $request = request()->all();
         $leave = Leave::find($request['id']);
+        $leaveReason = request()->leaveReason;
         $leave->status_of_leave = 'rejected';
         $leave->save();
-        Mail::to('saif.ayedi@live.fr')->send(new LeaveRequestMail($leave->user->profile->first_name,'rejected'));
-
+        Mail::to('saif.ayedi@live.fr')->send(new LeaveRequestMail($leave->user->profile->first_name, 'rejected', $leaveReason));
 
         return to_route('leave.index')->with('success', 'Leave request rejected successfully.');
     }

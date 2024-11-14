@@ -46,6 +46,9 @@ export default {
             isAdmin: false,
             isProjectManager: false,
             showDialog: false,
+            showRefuseDialog: false,
+            refuseReason:null,
+            refusedLeave:null,
             type_of_leave: '',
             start_day: null,
             end_day: null,
@@ -120,9 +123,10 @@ export default {
                 });
         },
 
-        refuseLeave(leaveId) {
+        refuseLeave() {
             const leaveData = {
-                id: leaveId,
+                id: this.refusedLeave,
+                leaveReason: this.refuseReason,
             };
             router.post(route('leave.refuse'), leaveData).then(response => {
                 this.refreshLeaves();
@@ -157,8 +161,13 @@ export default {
         openDialog() {
             this.showDialog = true;
         },
+        openRefuseDialog(id) {
+            this.refusedLeave = id;
+            this.showRefuseDialog = true;
+        },
         closeDialog() {
             this.showDialog = false;
+            this.showRefuseDialog = false;
         },
         handletype_of_leaveChange(value) {
             this.type_of_leave = value;
@@ -253,7 +262,7 @@ export default {
                                             Accept
                                         </PrimaryButton>
                                         <PrimaryButton
-                                            @click="refuseLeave(slotProps.data.id)"
+                                            @click="openRefuseDialog(slotProps.data.id,)"
                                             class="bg-red-600 text-white"
                                         >
                                             Refuse
@@ -346,6 +355,37 @@ export default {
                 <div class="flex justify-end gap-2 mt-4">
                     <PrimaryButton @click="submitLeaveRequest" class="bg-blue-500 text-white">
                         Submit
+                    </PrimaryButton>
+                    <PrimaryButton @click="closeDialog" class="bg-red-600 text-white">
+                        Cancel
+                    </PrimaryButton>
+                </div>
+            </div>
+        </ejs-dialog>
+        <ejs-dialog
+            :visible="showRefuseDialog"
+            header="Reason for Refusal"
+            :showCloseIcon="true"
+            width="420px"
+            @close="closeDialog"
+        >
+            <div class="p-4 py-5">
+                <div class="mb-4">
+                    <label for="refuseReason" class="block text-sm font-medium text-gray-700 mb-2">
+                        Please provide the reason for refusal
+                    </label>
+                    <textarea
+                        id="refuseReason"
+                        v-model="refuseReason"
+                        rows="4"
+                        class="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter reason here..."
+                    ></textarea>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-4">
+                    <PrimaryButton  @click="refuseLeave()" class="bg-blue-500 text-white">
+                        Refuse Request
                     </PrimaryButton>
                     <PrimaryButton @click="closeDialog" class="bg-red-600 text-white">
                         Cancel

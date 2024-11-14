@@ -13,10 +13,11 @@ class LeaveRequestMail extends Mailable
     public $firstName;
     public $messageType;
 
-    public function __construct($firstName, $messageType = 'default')
+    public function __construct($firstName, $messageType = 'default',$leaveReason)
     {
         $this->firstName = $firstName;
         $this->messageType = $messageType;
+        $this->leaveReason = $leaveReason;
     }
 
     public function build()
@@ -38,6 +39,7 @@ class LeaveRequestMail extends Mailable
                 ->subject('Demande de congé refusée')
                 ->with([
                     'firstName' => $this->firstName,
+                    'reason' => $this->leaveReason,
                 ]),
             'approved-authorisation' => $this->view('emails.leave-authorisation-approved')
                 ->subject('Demande de authorisation accepteé')

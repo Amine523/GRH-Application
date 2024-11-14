@@ -53,11 +53,11 @@
                 <PrimaryButton :disabled="isAdmin(user)" @click="editUser(user.id)" class="bg-#082f49 text-white">
                     Edit
                 </PrimaryButton>
-                <PrimaryButton :disabled="isAdmin(user)" @click="deleteUser(user.id)" class="bg-red-500 text-white">
-                    Delete
-                </PrimaryButton>
                 <PrimaryButton :disabled="isAdmin(user)" @click="warning(user.id)" class="bg-amber-400 text-white">
                     Warn
+                </PrimaryButton>
+                <PrimaryButton :disabled="isAdmin(user)" @click="deleteUser(user.id)" class="bg-red-500 text-white">
+                    Delete
                 </PrimaryButton>
             </div>
         </div>
