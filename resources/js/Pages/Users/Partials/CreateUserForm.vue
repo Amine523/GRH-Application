@@ -128,8 +128,11 @@
                             label=""/>
                     </div>
                     <div>
-                        <InputLabel for="file" value="Profile Picture"/>
-                        <input type="file" @input="form.profile_picture = $event.target.files[0]" />
+                        <label class="block mb-2 text-sm font-medium text-gray-900" for="file_input">Profile
+                            picture</label>
+                        <input
+                            class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none"
+                            id="file_input" type="file" @input="form.profile_picture = $event.target.files[0]">
                     </div>
                 </div>
 
@@ -175,16 +178,18 @@ const form = useForm({
     address: user ? user.profile.address : '',
     role_id: user ? user.roles[0].name : '',
     team_id: user ? user.team_id : '',
-    valid_balance : user ? user.valid_balance : '',
+    valid_balance: user ? user.valid_balance : '',
     profile_picture: null,
+    _method: 'post',
 });
 
 // Function to handle form submission
 const createUser = () => {
     const routeName = user ? 'users.update' : 'users.store';
-    const method = user ? 'patch' : 'post';
+    form._method = user ? 'patch' : 'post';
 
-    form[method](route(routeName, {user: user ? user.id : null}), {
+    form.post(route(routeName, {user: user ? user.id : null}), {
+        forceFormData: true,
         preserveScroll: true,
         onSuccess: () => {
             toast.success('User ' + (user ? 'updated' : 'created') + ' successfully!');

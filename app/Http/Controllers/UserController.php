@@ -51,8 +51,10 @@ class UserController extends Controller
      */
     public function store(UserRequest $userRequest, ProfileUpdateRequest $profileUpdateRequest, UserRoleRequest $userRoleRequest)
     {
-        $fileUpload = $profileUpdateRequest->file('profile_picture')->store('profile_pictures', 'public');
-        $filePath = Storage::url($fileUpload);
+        if ($profileUpdateRequest->hasFile('profile_picture')) {
+            $fileUpload = $profileUpdateRequest->file('profile_picture')->store('profile_pictures', 'public');
+            $filePath = Storage::url($fileUpload);
+        }
         $user = User::create([
             'email' => $userRequest->email,
             'password' => Hash::make('password'),
@@ -100,33 +102,33 @@ class UserController extends Controller
         return to_route('user.index');
     }
 
-    /**
-     * Update the specified user in storage.
-     */
     public function update(ProfileUpdateRequest $request, User $user, UserRoleRequest $userRoleRequest, UserRequest $userRequest)
     {
+        $profileData = $request->validated();
 
-        $validatedRoleData = $userRoleRequest->validated();
-        $userRequest = $userRequest->validated();
+        if ($request->hasFile('profile_picture')) {
+            $fileUpload = $request->file('profile_picture')->store('profile_pictures', 'public');
+            $profileData['profile_picture'] = Storage::url($fileUpload);
+        } else {
+            $profileData['profile_picture'] = $user->profile->profile_picture ?? null;
+        }
+
         $user->profile()->updateOrCreate(
             ['user_id' => $user->id],
-            $request->validated()
+            $profileData
         );
-        $user->updateOrCreate(
-            ['id' => $user->id],
-            $userRequest
-        );
-        if ($userRoleRequest->valid_balance != $user->valid_balance) {
-            $user->update(['valid_balance' => $userRoleRequest->valid_balance]);
-            Mail::to('saif.ayedi@live.fr')->send(new BalanceUpdatedMail($user, $userRoleRequest->valid_balance));
+        $user->update($userRequest->validated());
+
+        if ($userRoleRequest->validated()['valid_balance'] != $user->valid_balance) {
+            $user->update(['valid_balance' => $userRoleRequest->validated()['valid_balance']]);
+            Mail::to('saif.ayedi@live.fr')->send(new BalanceUpdatedMail($user, $userRoleRequest->validated()['valid_balance']));
         }
-        if (isset($validatedRoleData['role_id'])) {
-            $role = Role::where('name', $validatedRoleData['role_id'])->first();
+        if (isset($userRoleRequest->validated()['role_id'])) {
+            $role = Role::where('name', $userRoleRequest->validated()['role_id'])->first();
             if ($role) {
                 $user->roles()->sync($role->id);
             }
         }
-
 
         return to_route('user.index');
     }

@@ -7,13 +7,16 @@ import TextInput from '@/Components/TextInput.vue';
 import { useForm, usePage } from '@inertiajs/vue3';
 
 const user = usePage().props.auth.user;
-const { first_name, last_name, address, phone_number } = usePage().props;
+const { first_name, last_name, address, phone_number, profile_picture } = usePage().props;
 
 const form = useForm({
     first_name: first_name || '',
     last_name: last_name || '',
     address: address || '',
     phone_number: phone_number || '',
+    profile_picture: null,
+    profile_file:null,
+    _method : 'patch'
 });
 
 const isEditing = ref(false);
@@ -23,7 +26,8 @@ const enableEditing = () => {
 };
 
 const submitForm = () => {
-    form.patch(route('profile.update'), {
+    form.post(route('profile.update'), {
+        forceFormData: true,
         onSuccess: () => {
             isEditing.value = false;
         }
@@ -44,7 +48,7 @@ const submitForm = () => {
         </header>
 
         <form
-            @submit.prevent="form.patch(route('profile.update'))"
+            @submit.prevent="submitForm"
             class="mt-3 space-y-3"
         >
             <div class="flex space-x-4">
@@ -84,7 +88,7 @@ const submitForm = () => {
 
             <!-- Phone Number and Address side by side -->
             <div class="flex space-x-4">
-                <div class="w-1/2">
+                <div class="w-1/3">
                     <InputLabel for="phone_number" value="Phone Number" />
 
                     <TextInput
@@ -100,7 +104,7 @@ const submitForm = () => {
                     <InputError class="mt-2" :message="form.errors.phone_number" />
                 </div>
 
-                <div class="w-1/2">
+                <div class="w-1/3">
                     <InputLabel for="address" value="Address" />
 
                     <TextInput
@@ -115,10 +119,21 @@ const submitForm = () => {
 
                     <InputError class="mt-2" :message="form.errors.address" />
                 </div>
+                    <div class="w-1/3">
+                        <InputLabel for="profile_picture" value="Profile Picture" />
+                        <input
+                            id="profile_picture"
+                            type="file"
+                            class="mt-1 block w-full"
+                            @change="event => form.profile_picture = event.target.files[0]"
+                            :disabled="!isEditing"
+                        />
+                        <InputError class="mt-2" :message="form.errors.profile_picture" />
+                </div>
             </div>
 
             <div class="flex items-center gap-4">
-                <PrimaryButton :disabled="form.processing || !isEditing" @click="submitForm">
+                <PrimaryButton :disabled="form.processing || !isEditing" type="submit">
                     Save
                 </PrimaryButton>
 

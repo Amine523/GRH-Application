@@ -74,8 +74,7 @@ const showingNavigationDropdown = ref(false);
                                                 class="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
                                             >
                                                 {{
-                                                    $page.props.auth?.profile?.first_name
-                                                }}   {{ $page.props.auth?.profile?.last_name }}
+                                                    $page.props.auth?.profile?.first_name }}   {{ $page.props.auth?.profile?.last_name }}
                                                 <svg
                                                     class="-me-0.5 ms-2 h-4 w-4"
                                                     xmlns="http://www.w3.org/2000/svg"
@@ -89,6 +88,7 @@ const showingNavigationDropdown = ref(false);
                                                     />
                                                 </svg>
                                             </button>
+                                             <img :src="$page.props.auth?.profile?.profile_picture" class="profile-image">
                                         </span>
                                     </template>
 
@@ -231,3 +231,11 @@ const showingNavigationDropdown = ref(false);
         </div>
     </div>
 </template>
+
+<style>
+.profile-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+</style>
