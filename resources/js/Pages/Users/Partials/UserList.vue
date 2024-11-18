@@ -70,7 +70,7 @@ tr {
 /* Make the row hover effect smooth */
 tr:hover {
     transition: background-color 0.2s ease-in-out;
-    transform: translateY(2px);
+    transform: translateY(-1px);
 }
 
 /* Make the cursor a pointer when hovering over .svg images */
