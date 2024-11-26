@@ -19,7 +19,7 @@
                 <tbody>
                 <tr v-for="user in users" :key="user.id" class="hover:bg-gray-50 transition duration-200 border-b">
                     <th scope="row" class="flex items-center px-6 py-4 text-gray-900 whitespace-nowrap">
-                        <img class="w-12 h-12 rounded-full" :src="user.profile.profile_picture" alt="profile image">
+                        <img class="w-12 h-12 rounded-full" :src="user?.profile.profile_picture" alt="profile image">
                         <div class="ps-3">
                             <div class="text-base font-semibold">{{ user?.profile?.first_name }}
                                 {{ user?.profile?.last_name }}
