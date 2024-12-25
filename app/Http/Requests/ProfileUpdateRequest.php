@@ -18,13 +18,12 @@ class ProfileUpdateRequest extends FormRequest
         return [
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
-            'address' => ['required', 'string', 'max:255'],
-            'phone_number' => ['required', 'string', 'max:15'],
+            'address' => ['nullable', 'string', 'max:255'], // Made address optional
+            'phone_number' => ['required', 'string', 'max:15'], // Phone number optional
             'profile_picture' => [
                 'nullable',
                 'image',
-                'mimes:jpeg,png,jpg,gif',
-                'max:2048'
+                'mimes:jpeg,png,jpg,gif'
             ],
         ];
     }

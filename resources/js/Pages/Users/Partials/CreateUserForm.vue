@@ -12,7 +12,7 @@
                 <!-- First Name and Last Name -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <InputLabel for="first_name" value="First Name"/>
+                        <InputLabel for="first_name" value="First Name*"/>
 
                         <TextInput
                             id="first_name"
@@ -28,7 +28,7 @@
 
                     <!-- Last Name -->
                     <div>
-                        <InputLabel for="last_name" value="Last Name"/>
+                        <InputLabel for="last_name" value="Last Name*"/>
 
                         <TextInput
                             id="last_name"
@@ -44,7 +44,7 @@
 
                 <!-- Email -->
                 <div>
-                    <InputLabel for="email" value="Email"/>
+                    <InputLabel for="email" value="Email*"/>
 
                     <TextInput
                         id="email"
@@ -62,7 +62,7 @@
                 <div class="grid grid-cols-4 gap-4">
                     <!-- Phone Number -->
                     <div>
-                        <InputLabel for="phone_number" value="Phone Number"/>
+                        <InputLabel for="phone_number" value="Phone Number*"/>
 
                         <TextInput
                             id="phone_number"
@@ -91,14 +91,17 @@
                     </div>
                     <!-- Address -->
                     <div>
-                        <InputLabel for="valid_balance" value="Valid Balance"/>
+                        <InputLabel for="valid_balance" value="Valid Balance*"/>
 
                         <TextInput
                             id="valid_balance"
-                            type="text"
+                            type="number"
                             class="mt-1 block w-full"
                             v-model="form.valid_balance"
                             autocomplete="valid_balance"
+                            step="0.1"
+                            @blur="enforceOneDecimalPlace"
+
                         />
 
                         <InputError class="mt-2" :message="form.errors.valid_balance"/>
@@ -106,7 +109,7 @@
 
                     <!-- Role -->
                     <div>
-                        <InputLabel for="role_id" value="User Role"/>
+                        <InputLabel for="role_id" value="User Role*"/>
                         <SelectItems
                             id="role_id"
                             v-model="form.role_id"
@@ -198,5 +201,13 @@ const createUser = () => {
             toast.error('There was an error ' + (user ? 'updating' : 'creating') + ' the user.');
         }
     });
+};
+// Function to enforce one decimal place
+const enforceOneDecimalPlace = () => {
+    let value = parseFloat(form.valid_balance); // Parse input as a float
+    if (isNaN(value)) {
+        value = 0.0; // Default to 0.0 if invalid
+    }
+    form.valid_balance = value.toFixed(1); // Format to one decimal place
 };
 </script>

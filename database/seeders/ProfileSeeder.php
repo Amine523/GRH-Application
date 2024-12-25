@@ -22,7 +22,6 @@ class ProfileSeeder extends Seeder
             "phone_number"=> '23735335',
             "profile_picture"=> '',
             "address"=> 'Route Ain klm 3 Ceinture Bourguiba',
-
         ]);
     }
 }
