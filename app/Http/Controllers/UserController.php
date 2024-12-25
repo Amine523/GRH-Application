@@ -51,20 +51,24 @@ class UserController extends Controller
      */
     public function store(UserRequest $userRequest, ProfileUpdateRequest $profileUpdateRequest, UserRoleRequest $userRoleRequest)
     {
+        // Initialize $filePath with a default value
+        $filePath = null;
+        // Handle profile picture upload if present
         if ($profileUpdateRequest->hasFile('profile_picture')) {
             $fileUpload = $profileUpdateRequest->file('profile_picture')->store('profile_pictures', 'public');
             $filePath = Storage::url($fileUpload);
         }
+        // Create the user
         $user = User::create([
             'email' => $userRequest->email,
             'password' => Hash::make('password'),
             'valide_balance' => 23,
             'team_id' => $userRequest->team_id,
         ]);
-
+        // Create the user's profile with the provided data and the profile picture path
         $user->profile()->create([...$profileUpdateRequest->validated(),'profile_picture'=>$filePath]);
         $user->assignRole($userRoleRequest->role_id);
-        Mail::to('saif.ayedi@live.fr')->send(new WelcomeNewUserMail($user));
+        Mail::to($user->email)->send(new WelcomeNewUserMail($user));
         return to_route('user.index');
     }
 
@@ -98,7 +102,7 @@ class UserController extends Controller
 
     public function warning(User $user)
     {
-        Mail::to('saif.ayedi@live.fr')->send(new WarningUser($user->profile->first_name));
+        Mail::to($user->email)->send(new WarningUser($user->profile->first_name));
         return to_route('user.index');
     }
 
@@ -121,7 +125,7 @@ class UserController extends Controller
 
         if ($userRoleRequest->validated()['valid_balance'] != $user->valid_balance) {
             $user->update(['valid_balance' => $userRoleRequest->validated()['valid_balance']]);
-            Mail::to('saif.ayedi@live.fr')->send(new BalanceUpdatedMail($user, $userRoleRequest->validated()['valid_balance']));
+            Mail::to($user->email)->send(new BalanceUpdatedMail($user, $userRoleRequest->validated()['valid_balance']));
         }
         if (isset($userRoleRequest->validated()['role_id'])) {
             $role = Role::where('name', $userRoleRequest->validated()['role_id'])->first();

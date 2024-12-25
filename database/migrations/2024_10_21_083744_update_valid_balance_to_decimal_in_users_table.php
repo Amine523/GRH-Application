@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             // Change valid_balance to decimal with precision 8 and scale 2 (e.g., 999999.99)
-            $table->decimal('valid_balance', 8, 2)->default(23.00)->change();
+            $table->decimal('valid_balance', 8, 2)->default(23.0)->change();
         });
     }
 

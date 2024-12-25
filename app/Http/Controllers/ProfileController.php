@@ -35,7 +35,8 @@ class ProfileController extends Controller
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $profile = $request->user()->profile;
-        $filePath = $profile->profile_picture ?? null;
+        $filePath = $profile->profile_picture ?? 'public/images/profile.png';
+        dd($filePath);
 
         if ($request->hasFile('profile_picture')) {
             $fileUpload = $request->file('profile_picture')->store('profile_pictures', 'public');

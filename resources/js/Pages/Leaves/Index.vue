@@ -186,6 +186,7 @@ export default {
             router.post(route('leave.store'), leaveData);
             this.closeDialog();
         },
+
     }
 }
 </script>
