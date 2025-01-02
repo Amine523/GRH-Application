@@ -49,10 +49,21 @@ const showingNavigationDropdown = ref(false);
                                     :active="route().current('user.index')">
                                     User List
                                 </NavLink>
+                                <NavLink
+                                    :href="route('teams.index')"
+                                    :active="route().current('teams.index')">
+                                    Teams
+                                </NavLink>
+                                <NavLink
+                                    :href="route('leave.index')"
+                                    :active="route().current('leave.index')">
+                                    Leave Request
+                                </NavLink>
                             </div>
                         </div>
 
                         <div class="hidden sm:ms-6 sm:flex sm:items-center">
+                            <b>your leave balance is: {{$page.props.auth?.user?.valid_balance}}</b>
                             <!-- Settings Dropdown -->
                             <div class="relative ms-3">
                                 <Dropdown align="right" width="48">
@@ -63,8 +74,7 @@ const showingNavigationDropdown = ref(false);
                                                 class="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
                                             >
                                                 {{
-                                                    $page.props.auth?.profile?.first_name
-                                                }}   {{ $page.props.auth?.profile?.last_name }}
+                                                    $page.props.auth?.profile?.first_name }}   {{ $page.props.auth?.profile?.last_name }}
                                                 <svg
                                                     class="-me-0.5 ms-2 h-4 w-4"
                                                     xmlns="http://www.w3.org/2000/svg"
@@ -78,15 +88,11 @@ const showingNavigationDropdown = ref(false);
                                                     />
                                                 </svg>
                                             </button>
+                                             <img :src="$page.props.auth?.profile?.profile_picture" class="profile-image">
                                         </span>
                                     </template>
 
                                     <template #content>
-                                        <DropdownLink
-                                            :href="route('profile.edit')"
-                                        >
-                                            Profile
-                                        </DropdownLink>
                                         <DropdownLink
                                             :href="route('logout')"
                                             method="post"
@@ -157,7 +163,27 @@ const showingNavigationDropdown = ref(false);
                         >
                             Dashboard
                         </ResponsiveNavLink>
-
+                        <ResponsiveNavLink
+                            :href="route('profile.edit')"
+                            :active="route().current('profile.edit')">
+                            Profile
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="$page.props.auth.user_roles[0] === 'admin'"
+                            :href="route('user.index')"
+                            :active="route().current('user.index')">
+                            User List
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('teams.index')"
+                            :active="route().current('teams.index')">
+                            Teams
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('leave.index')"
+                            :active="route().current('leave.index')">
+                            Leave Request
+                        </ResponsiveNavLink>
                     </div>
 
                     <!-- Responsive Settings Options -->
@@ -176,9 +202,6 @@ const showingNavigationDropdown = ref(false);
                         </div>
 
                         <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink :href="route('profile.edit')">
-                                Profile
-                            </ResponsiveNavLink>
                             <ResponsiveNavLink
                                 :href="route('logout')"
                                 method="post"
@@ -208,3 +231,11 @@ const showingNavigationDropdown = ref(false);
         </div>
     </div>
 </template>
+
+<style>
+.profile-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+</style>

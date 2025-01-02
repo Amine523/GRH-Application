@@ -20,6 +20,9 @@ class User extends Authenticated
     protected $fillable = [
         'email',
         'password',
+        'valid_balance',
+        'team_id',
+        'authorization_hours',
     ];
 
     /**
@@ -32,6 +35,21 @@ class User extends Authenticated
         'remember_token',
     ];
 
+    public function profile()
+    {
+        return $this->hasOne(Profile::class);
+    }
+
+    public function team()
+    {
+        return $this->belongsTo(Team::class);
+    }
+
+    public function leaves()
+    {
+        return $this->hasMany(Leave::class);
+    }
+
     /**
      * Get the attributes that should be cast.
      *
@@ -43,10 +61,5 @@ class User extends Authenticated
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
-    }
-
-    public function profile()
-    {
-        return $this->hasOne(Profile::class);
     }
 }

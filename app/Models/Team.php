@@ -11,14 +11,13 @@ class Team extends Model
 
     protected $fillable = [
         'team_name',
+        'project_manager_id',
         'profile_picture'
     ];
 
     public function projectManager()
     {
-        return $this->belongsTo(User::class, 'project_manager')->whereHas('roles', function($query) {
-            $query->where('name', 'project_manager');
-        });
+        return $this->belongsTo(User::class, 'project_manager_id');
     }
 
     public function users()
@@ -26,8 +25,4 @@ class Team extends Model
         return $this->hasMany(User::class);
     }
 
-    public function canDeleteProjectManager()
-    {
-        return $this->users()->where('role', 'project_manager')->doesntExist();
-    }
 }

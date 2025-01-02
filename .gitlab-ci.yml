@@ -1,0 +1,29 @@
+before_script:
+  - export COMPOSER_ALLOW_SUPERUSER=1
+  - export PATH="/home/gitlab-runner/.nvm/versions/node/v21.7.3/bin:$PATH"
+
+
+stages:          
+  - build
+
+build-job:       
+  stage: build
+  tags:
+    - grh
+  only:
+    - main
+  script:
+    - cat ~/.bashrc
+    - source ~/.bashrc
+    - echo $PATH
+    - pwd
+    - ls -la
+    - cd /var/www/html/GRH-Application
+    - git reset --hard
+    - git pull
+    - node -v
+    - npm install
+    - composer install
+    - npm run build
+    
+  
