@@ -19,6 +19,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(UrlGenerator $url): void
     {
         $this->app->bind(ValidatePropertiesDataPipe::class, PrecognitivelyValidatePropertiesDataPipe::class);
-        $url->forceScheme('https');
+        if (config('app.env') !== 'local') {
+            $url->forceScheme('https');
+        }
     }
 }

@@ -2,10 +2,12 @@
 
 namespace App\Repositories;
 
+use App\Mail\LeaveRequestMail;
 use App\Models\Leave;
 use DateTime;
 use DateInterval;
 use DatePeriod;
+use Illuminate\Support\Facades\Mail;
 use function Psy\debug;
 
 class LeaveRepository
@@ -16,7 +18,7 @@ class LeaveRepository
      */
     public function createLeave($data, $startDay, $endDate)
     {
-        Leave::create([
+        $leave = Leave::create([
             'user_id' => $data->user_id,
             'type_of_leave' => $data->type_of_leave,
             'start_day' => $startDay->format('Y/m/d'),
@@ -24,6 +26,7 @@ class LeaveRepository
             'status_of_leave' => 'pending',
             'authorization_hour' => (float)$data->authorisationHours,
         ]);
+        return $leave;
     }
 
     /**
@@ -54,5 +57,26 @@ class LeaveRepository
         }
 
         return $weekdays;
+    }
+
+    public function acceptVacation(Leave $leave)
+    {
+        if ($leave->type_of_leave === 'vacation') {
+            $validBalance = $leave->user->valid_balance;
+            $numberOfDays = $this->getWeekdaysBetween($leave->start_day, $leave->end_day);
+
+            if ($validBalance >= $numberOfDays) {
+                $leave->user->valid_balance -= $numberOfDays;
+                $leave->status_of_leave = 'approved';
+                $leave->user->save();
+                $leave->save();
+
+                Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'approved'));
+
+            } else {
+                Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'rejected-vacation'));
+                return back()->with('error', 'Not enough vacation leave balance.');
+            }
+        }
     }
 }

@@ -13,7 +13,7 @@ class LeaveRequestMail extends Mailable
     public $firstName;
     public $messageType;
 
-    public function __construct($firstName, $messageType = 'default',$leaveReason)
+    public function __construct($firstName, $messageType, $leaveReason = null)
     {
         $this->firstName = $firstName;
         $this->messageType = $messageType;
@@ -37,6 +37,12 @@ class LeaveRequestMail extends Mailable
 
             'rejected' => $this->view('emails.leave-rejected')
                 ->subject('Demande de congé refusée')
+                ->with([
+                    'firstName' => $this->firstName,
+                    'reason' => $this->leaveReason,
+                ]),
+            'revoke' => $this->view('emails.leave-rejected')
+                ->subject('Demande de congé révoqué')
                 ->with([
                     'firstName' => $this->firstName,
                     'reason' => $this->leaveReason,

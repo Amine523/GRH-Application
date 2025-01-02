@@ -56,6 +56,7 @@ Route::middleware('auth')->group(function () {
     Route::group(['middleware' => ['role:admin|project_manager']], function () {
         Route::post('/Leave/approve', [\App\Http\Controllers\LeaveController::class, 'approve'])->name('leave.approve');
         Route::post('/Leave/refuse', [\App\Http\Controllers\LeaveController::class, 'refuse'])->name('leave.refuse');
+        Route::post('/Leave/revoke', [\App\Http\Controllers\LeaveController::class, 'revoke'])->name('leave.revoke');
     });
 
 });
