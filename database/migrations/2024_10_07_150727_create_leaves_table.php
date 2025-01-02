@@ -19,7 +19,7 @@ class CreateLeavesTable extends Migration
             $table->date('start_day');
             $table->date('end_day');
             $table->string('type_of_leave');
-            $table->enum('status_of_leave', ['pending', 'approved', 'rejected']);
+            $table->enum('status_of_leave', ['pending', 'approved', 'rejected', 'revoked']);
             $table->softDeletes();
             $table->timestamps();
         });

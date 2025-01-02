@@ -14,6 +14,7 @@ import Column from 'primevue/column';
 import InputText from 'primevue/inputtext';
 import Tag from 'primevue/tag';
 import {useToast} from "vue-toastification";
+import moment from "moment";
 
 export default {
     name: "Index",
@@ -47,8 +48,11 @@ export default {
             isProjectManager: false,
             showDialog: false,
             showRefuseDialog: false,
-            refuseReason:null,
-            refusedLeave:null,
+            refuseReason: null,
+            refusedLeave: null,
+            showRevokeDialog: false,
+            revokedLeave: null,
+            revokeReason: null,
             type_of_leave: '',
             start_day: null,
             end_day: null,
@@ -64,7 +68,7 @@ export default {
     },
     props: {
         leaves: Array,
-        user : Object,
+        user: Object,
     },
     computed: {
         mappedLeaves() {
@@ -89,23 +93,9 @@ export default {
         if (this.$attrs.auth.user_roles[0].includes('project_manager')) {
             this.isProjectManager = true;
         }
-        // Set users and map to options
         this.users = this.$attrs.users;
         this.mappedUsers = this.mapToOptions(this.users, 'profile.first_name', 'id');
-
-        this.eventSettings.dataSource = this.leaves.map(leave => {
-            const user = this.users.find(user => user.id === leave.user_id);
-            const userName = user ? user.profile.first_name.toUpperCase() : 'Unknown User';
-            return {
-                Id: leave.id,
-                Subject: ` ${leave.type_of_leave} for  ${userName} Status : ${leave.status_of_leave.toUpperCase()}`,
-                StartTime: new Date(leave.start_day),
-                EndTime: new Date(leave.end_day),
-                Status: leave.status_of_leave,
-                FirstName: user?.profile?.first_name ?? '',
-                LastName: user?.profile?.last_name ?? '',
-            };
-        });
+        this.setEventDataSource();
     },
     methods: {
         approveLeave(leaveId) {
@@ -113,14 +103,12 @@ export default {
                 id: leaveId,
             };
             const toast = useToast();
-            router.post(route('leave.approve'), leaveData)
-                .then(response => {
+            router.post(route('leave.approve'), leaveData, {
+                preserveScroll: true,
+                onSuccess: () => {
                     this.refreshLeaves();
-                    toast.success('Leave approved successfully!');
-                })
-                .catch(error => {
-                    toast.error('There was an error approving the leave.');
-                });
+                },
+            })
         },
 
         refuseLeave() {
@@ -134,7 +122,18 @@ export default {
                 console.error('Error refusing leave:', error);
             });
         },
-
+        revokeLeave() {
+            const leaveData = {
+                id: this.revokedLeave,
+                revokeReason: this.revokeReason,
+            };
+            router.post(route('leave.revoke'), leaveData, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    this.refreshLeaves();
+                },
+            });
+        },
         refreshLeaves() {
             router.get(route('leave.index')).then(response => {
                 this.leaves = response.data.leaves;
@@ -165,9 +164,14 @@ export default {
             this.refusedLeave = id;
             this.showRefuseDialog = true;
         },
+        openRevokeDialog(id) {
+            this.revokedLeave = id;
+            this.showRevokeDialog = true;
+        },
         closeDialog() {
             this.showDialog = false;
             this.showRefuseDialog = false;
+            this.showRevokeDialog = false;
         },
         handletype_of_leaveChange(value) {
             this.type_of_leave = value;
@@ -183,10 +187,31 @@ export default {
                 authorisationHours: this.type_of_leave === 'authorisation' ? String(this.authorisationHours) : null,
                 user_id: this.team_user ? this.team_user : this.$attrs.auth.user.id,
             };
-            router.post(route('leave.store'), leaveData);
-            this.closeDialog();
+            router.post(route('leave.store'), leaveData, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    this.closeDialog();
+                    this.refreshLeaves();
+                    this.setEventDataSource();
+                },
+            })
         },
+        setEventDataSource() {
+            this.eventSettings.dataSource = this.leaves.map(leave => {
+                const user = this.users.find(user => user.id === leave.user_id);
+                const userName = user ? user.profile.first_name.toUpperCase() : 'Unknown User';
 
+                return {
+                    Id: leave.id,
+                    Subject: ` ${leave.type_of_leave} for  ${userName} Status : ${leave.status_of_leave.toUpperCase()}`,
+                    StartTime: moment(leave.start_day, 'DD/MM/YYYY').format('MM/DD/YYYY'),
+                    EndTime: moment(leave.end_day, 'DD/MM/YYYY').format('MM/DD/YYYY'),
+                    Status: leave.status_of_leave,
+                    FirstName: user?.profile?.first_name ?? '',
+                    LastName: user?.profile?.last_name ?? '',
+                };
+            });
+        }
     }
 }
 </script>
@@ -200,7 +225,7 @@ export default {
         </template>
 
         <div class="py-12">
-            <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
+            <div class="mx-auto space-y-6 sm:px-6 lg:px-8">
                 <div class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
                     <div class="flex justify-end py-5 gap-2">
                         <PrimaryButton @click="openDialog" class="bg-green-600 text-white">
@@ -216,7 +241,7 @@ export default {
                     ></ejs-schedule>
                 </div>
             </div>
-            <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8 py-5" v-if="isProjectManager || isAdmin">
+            <div class="mx-auto space-y-6 sm:px-6 lg:px-8 py-5">
                 <div class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
                     <div class="mt-6">
                         <h3 class="text-lg font-bold mb-4">Leave Requests</h3>
@@ -246,14 +271,14 @@ export default {
                             <Column field="type_of_leave" header="Type of Leave" sortable/>
                             <Column field="status_of_leave" header="Status of Leave" sortable bodyClass="text-center">
                                 <template #body="slotProps">
-                                    <Tag v-if="slotProps.data.status_of_leave === 'approved'" severity="success"
-                                         value="Approved"/>
-                                    <Tag v-else-if="slotProps.data.status_of_leave === 'pending'" severity="warn"
-                                         value="Pending"/>
+                                    <Tag v-if="slotProps.data.status_of_leave === 'approved'" severity="success" value="Approved"/>
+                                    <Tag v-else-if="slotProps.data.status_of_leave === 'pending'" severity="warn" value="Pending"/>
+                                    <Tag v-else-if="slotProps.data.status_of_leave === 'revoked'" severity="info" value="Revoked"/>
                                     <Tag v-else severity="danger" value="Refused"/>
                                 </template>
                             </Column>
-                            <Column field="action" header="Action" bodyClass="text-center">
+                            <Column field="action" header="Action" bodyClass="text-center"
+                                    v-if="isProjectManager || isAdmin">
                                 <template #body="slotProps">
                                     <template v-if="slotProps.data.status_of_leave === 'pending'">
                                         <PrimaryButton
@@ -263,10 +288,18 @@ export default {
                                             Accept
                                         </PrimaryButton>
                                         <PrimaryButton
-                                            @click="openRefuseDialog(slotProps.data.id,)"
+                                            @click="openRefuseDialog(slotProps.data.id)"
                                             class="bg-red-600 text-white"
                                         >
                                             Refuse
+                                        </PrimaryButton>
+                                    </template>
+                                    <template v-else-if="slotProps.data.status_of_leave !== 'revoked'">
+                                        <PrimaryButton
+                                            @click="openRevokeDialog(slotProps.data.id)"
+                                            class="bg-yellow-500 text-white"
+                                        >
+                                            Revoke
                                         </PrimaryButton>
                                     </template>
                                 </template>
@@ -328,10 +361,10 @@ export default {
                 <div class="mt-5 gap-3">
                     <div v-if="type_of_leave !== 'authorisation' && type_of_leave !== 'halfday'">
                         <label>Start Date:</label>
-                        <ejs-datepicker v-model="start_day"></ejs-datepicker>
+                        <ejs-datepicker format='dd-MM-yyyy' v-model="start_day"></ejs-datepicker>
 
                         <label>End Date:</label>
-                        <ejs-datepicker v-model="end_day"></ejs-datepicker>
+                        <ejs-datepicker format='dd-MM-yyyy' v-model="end_day"></ejs-datepicker>
                     </div>
 
                     <div v-if="type_of_leave === 'halfday' || type_of_leave === 'authorisation'">
@@ -385,8 +418,39 @@ export default {
                 </div>
 
                 <div class="flex justify-end gap-2 mt-4">
-                    <PrimaryButton  @click="refuseLeave()" class="bg-blue-500 text-white">
+                    <PrimaryButton @click="refuseLeave()" class="bg-blue-500 text-white">
                         Refuse Request
+                    </PrimaryButton>
+                    <PrimaryButton @click="closeDialog" class="bg-red-600 text-white">
+                        Cancel
+                    </PrimaryButton>
+                </div>
+            </div>
+        </ejs-dialog>
+        <ejs-dialog
+            :visible="showRevokeDialog"
+            header="Reason for the revoke"
+            :showCloseIcon="true"
+            width="420px"
+            @close="closeDialog"
+        >
+            <div class="p-4 py-5">
+                <div class="mb-4">
+                    <label for="revokeReason" class="block text-sm font-medium text-gray-700 mb-2">
+                        Please provide the reason for the revoke
+                    </label>
+                    <textarea
+                        id="revokeReason"
+                        v-model="revokeReason"
+                        rows="4"
+                        class="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter reason here..."
+                    ></textarea>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-4">
+                    <PrimaryButton @click="revokeLeave()" class="bg-blue-500 text-white">
+                        Revoke Request
                     </PrimaryButton>
                     <PrimaryButton @click="closeDialog" class="bg-red-600 text-white">
                         Cancel

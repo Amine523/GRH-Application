@@ -42,7 +42,7 @@ class User extends Authenticated
 
     public function team()
     {
-        return $this->hasOne(Team::class);
+        return $this->belongsTo(Team::class);
     }
 
     public function leaves()

@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Team;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class TeamSeeder extends Seeder
@@ -13,10 +13,16 @@ class TeamSeeder extends Seeder
      */
     public function run(): void
     {
-        Team::create([
-            "team_name"=>"MGO",
-            "project_manager_id"=>6,
-            "profile_picture"=>"",
-        ]);
+        $user = User::role('admin')->first();
+
+        if ($user) {
+            Team::create([
+                "team_name" => "Softtodo",
+                "project_manager_id" => $user->id,
+                "profile_picture" => "",
+            ]);
+        } else {
+            $this->command->info('No user with the "admin" role found. Please ensure an admin user exists.');
+        }
     }
 }
