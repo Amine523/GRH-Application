@@ -160,13 +160,14 @@ class LeaveController extends Controller
 
         $leaveDays = $leaveService->countWorkingDays($leave->start_day, $leave->end_day);
 
-        $leave->user->valid_balance += $leaveDays;
-        $leave->user->save();
+        $user = $leave->user;
+        $user->valid_balance += $leaveDays;
+        $user->save();
 
         $leave->status_of_leave = 'revoked';
         $leave->save();
 
-        Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'revoke', $revokeReason));
+        Mail::to($user->email)->send(new LeaveRequestMail($user->profile->first_name, 'revoke', $revokeReason));
 
         return to_route('leave.index')->with('success', 'Leave request revoked successfully.');
     }

@@ -16,9 +16,9 @@ class LeaveRepository
      * @param $data
      * @return void
      */
-    public function createLeave($data, $startDay, $endDate)
+    public function createLeave($data, $startDay, $endDate): Leave
     {
-        $leave = Leave::create([
+        return Leave::create([
             'user_id' => $data->user_id,
             'type_of_leave' => $data->type_of_leave,
             'start_day' => $startDay->format('Y/m/d'),
@@ -26,7 +26,6 @@ class LeaveRepository
             'status_of_leave' => 'pending',
             'authorization_hour' => (float)$data->authorisationHours,
         ]);
-        return $leave;
     }
 
     /**
@@ -78,5 +77,6 @@ class LeaveRepository
                 return back()->with('error', 'Not enough vacation leave balance.');
             }
         }
+        return back()->with('success', 'Vacation leave has been accepted.');
     }
 }
