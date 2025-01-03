@@ -113,7 +113,6 @@ class LeaveController extends Controller
                 $leave->user->authorization_hours -= $leave->authorization_hour;
                 $leave->user->save();
                 Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'approved-authorisation'));
-
             } else {
                 Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'rejected-authorisation'));
                 return back()->with('error', 'Not enough authorization hours available.');
@@ -167,7 +166,7 @@ class LeaveController extends Controller
         $leave->status_of_leave = 'revoked';
         $leave->save();
 
-        Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'revoked', $revokeReason));
+        Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'revoke', $revokeReason));
 
         return to_route('leave.index')->with('success', 'Leave request revoked successfully.');
     }

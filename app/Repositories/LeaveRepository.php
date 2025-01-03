@@ -74,7 +74,7 @@ class LeaveRepository
                 Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'approved'));
 
             } else {
-                Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'rejected-vacation'));
+                Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'rejected'));
                 return back()->with('error', 'Not enough vacation leave balance.');
             }
         }

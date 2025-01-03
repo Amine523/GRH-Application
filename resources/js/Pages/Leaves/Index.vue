@@ -40,8 +40,9 @@ export default {
     data() {
         return {
             eventSettings: {
-                dataSource: [] // Initialize as empty to be populated later
+                dataSource: []
             },
+            workDays: [1, 2, 3, 4, 5],
             views: ['Month', 'Day', 'Agenda'],
             selectedDate: new Date(),
             isAdmin: false,
@@ -98,6 +99,12 @@ export default {
         this.setEventDataSource();
     },
     methods: {
+        disableWeekends(args) {
+            const day = args.date.getDay();
+            if (day === 0 || day === 6) {
+                args.isDisabled = true;
+            }
+        },
         approveLeave(leaveId) {
             const leaveData = {
                 id: leaveId,
@@ -149,9 +156,15 @@ export default {
             if (args.data.Status === 'pending') {
                 args.element.style.backgroundColor = 'orange';
             } else if (args.data.Status === 'approved') {
-                args.element.style.backgroundColor = 'green';
+                if (args.data.Subject.includes('authorisation')) {
+                    args.element.style.backgroundColor = 'blue';
+                } else {
+                    args.element.style.backgroundColor = 'green';
+                }
             } else if (args.data.Status === 'rejected') {
                 args.element.style.backgroundColor = 'red';
+            } else if (args.data.Status === 'revoked') {
+                args.element.style.backgroundColor = 'gray';
             }
         },
         getNestedValue(item, field) {
@@ -197,20 +210,41 @@ export default {
             })
         },
         setEventDataSource() {
-            this.eventSettings.dataSource = this.leaves.map(leave => {
-                const user = this.users.find(user => user.id === leave.user_id);
-                const userName = user ? user.profile.first_name.toUpperCase() : 'Unknown User';
+            this.eventSettings.dataSource = this.leaves
+                .flatMap(leave => {
+                    const user = this.users.find(user => user.id === leave.user_id);
+                    const userName = user ? user.profile.first_name.toUpperCase() : 'Unknown User';
 
-                return {
-                    Id: leave.id,
-                    Subject: ` ${leave.type_of_leave} for  ${userName} Status : ${leave.status_of_leave.toUpperCase()}`,
-                    StartTime: moment(leave.start_day, 'DD/MM/YYYY').format('MM/DD/YYYY'),
-                    EndTime: moment(leave.end_day, 'DD/MM/YYYY').format('MM/DD/YYYY'),
-                    Status: leave.status_of_leave,
-                    FirstName: user?.profile?.first_name ?? '',
-                    LastName: user?.profile?.last_name ?? '',
-                };
-            });
+                    const startDate = moment(leave.start_day, 'DD/MM/YYYY');
+                    const endDate = moment(leave.end_day, 'DD/MM/YYYY');
+
+                    const events = [];
+                    let currentStart = startDate.clone();
+
+                    while (currentStart.isSameOrBefore(endDate)) {
+                        const currentWeekEnd = moment.min(
+                            currentStart.clone().day(5),
+                            endDate.clone()
+                        );
+
+                        if (currentStart.day() !== 0 && currentStart.day() !== 6) {
+                            events.push({
+                                Id: leave.id,
+                                Subject: `${leave.type_of_leave} for ${userName} Status: ${leave.status_of_leave.toUpperCase()}`,
+                                StartTime: currentStart.format('MM/DD/YYYY'),
+                                EndTime: currentWeekEnd.clone().add(1, 'day').format('MM/DD/YYYY'),
+                                Status: leave.status_of_leave,
+                                Type: leave.type_of_leave,
+                                FirstName: user?.profile?.first_name ?? '',
+                                LastName: user?.profile?.last_name ?? '',
+                            });
+                        }
+
+                        currentStart = currentWeekEnd.clone().add(3, 'days');
+                    }
+
+                    return events;
+                });
         }
     }
 }
@@ -271,9 +305,12 @@ export default {
                             <Column field="type_of_leave" header="Type of Leave" sortable/>
                             <Column field="status_of_leave" header="Status of Leave" sortable bodyClass="text-center">
                                 <template #body="slotProps">
-                                    <Tag v-if="slotProps.data.status_of_leave === 'approved'" severity="success" value="Approved"/>
-                                    <Tag v-else-if="slotProps.data.status_of_leave === 'pending'" severity="warn" value="Pending"/>
-                                    <Tag v-else-if="slotProps.data.status_of_leave === 'revoked'" severity="info" value="Revoked"/>
+                                    <Tag v-if="slotProps.data.status_of_leave === 'approved'" severity="success"
+                                         value="Approved"/>
+                                    <Tag v-else-if="slotProps.data.status_of_leave === 'pending'" severity="warn"
+                                         value="Pending"/>
+                                    <Tag v-else-if="slotProps.data.status_of_leave === 'revoked'" severity="info"
+                                         value="Revoked"/>
                                     <Tag v-else severity="danger" value="Refused"/>
                                 </template>
                             </Column>
@@ -361,15 +398,18 @@ export default {
                 <div class="mt-5 gap-3">
                     <div v-if="type_of_leave !== 'authorisation' && type_of_leave !== 'halfday'">
                         <label>Start Date:</label>
-                        <ejs-datepicker format='dd-MM-yyyy' v-model="start_day"></ejs-datepicker>
+                        <ejs-datepicker format='dd-MM-yyyy' v-model="start_day" :firstDayOfWeek='1'
+                                        :renderDayCell="disableWeekends"></ejs-datepicker>
 
                         <label>End Date:</label>
-                        <ejs-datepicker format='dd-MM-yyyy' v-model="end_day"></ejs-datepicker>
+                        <ejs-datepicker format='dd-MM-yyyy' v-model="end_day" :firstDayOfWeek='1'
+                                        :renderDayCell="disableWeekends"></ejs-datepicker>
                     </div>
 
                     <div v-if="type_of_leave === 'halfday' || type_of_leave === 'authorisation'">
                         <label>Date:</label>
-                        <ejs-datepicker v-model="start_day"></ejs-datepicker>
+                        <ejs-datepicker v-model="start_day" :firstDayOfWeek='1'
+                                        :renderDayCell="disableWeekends"></ejs-datepicker>
                     </div>
 
                     <!-- Slider for authorisation hours -->
