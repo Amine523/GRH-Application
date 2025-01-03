@@ -6,7 +6,6 @@ use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Requests\UserRequest;
 use App\Http\Requests\UserRoleRequest;
 use App\Mail\BalanceUpdatedMail;
-use App\Mail\UserAuth;
 use App\Mail\WarningUser;
 use App\Mail\WelcomeNewUserMail;
 use App\Models\Role;
@@ -51,21 +50,17 @@ class UserController extends Controller
      */
     public function store(UserRequest $userRequest, ProfileUpdateRequest $profileUpdateRequest, UserRoleRequest $userRoleRequest)
     {
-        // Initialize $filePath with a default value
-        $filePath = null;
-        // Handle profile picture upload if present
+        $filePath = '/storage/images/placeholder.png';
         if ($profileUpdateRequest->hasFile('profile_picture')) {
             $fileUpload = $profileUpdateRequest->file('profile_picture')->store('profile_pictures', 'public');
             $filePath = Storage::url($fileUpload);
         }
-        // Create the user
         $user = User::create([
             'email' => $userRequest->email,
             'password' => Hash::make('password'),
             'valide_balance' => 23,
             'team_id' => $userRequest->team_id,
         ]);
-        // Create the user's profile with the provided data and the profile picture path
         $user->profile()->create([...$profileUpdateRequest->validated(),'profile_picture'=>$filePath]);
         $user->assignRole($userRoleRequest->role_id);
         Mail::to($user->email)->send(new WelcomeNewUserMail($user));
