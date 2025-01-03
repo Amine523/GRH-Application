@@ -33,7 +33,6 @@
                         :error="form.errors.project_manager_id"
                         class="mt-1 block w-full"
                     />
-                    <InputError class="mt-2" :message="form.errors.project_manager_id"/>
                 </div>
             </div>
 
@@ -51,12 +50,12 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { useForm, usePage } from '@inertiajs/vue3';
-import { useToast } from 'vue-toastification';
+import {useForm, usePage} from '@inertiajs/vue3';
+import {useToast} from 'vue-toastification';
 import SelectItems from '@/Components/SelectItems.vue';
 
 const toast = useToast();
-const { projectManagers, team } = usePage().props;
+const {projectManagers, team} = usePage().props;
 
 // Prepare options for project managers
 const usersOptions = projectManagers.map(manager => ({
@@ -75,7 +74,7 @@ const createTeam = () => {
     const routeName = team ? 'teams.update' : 'teams.store'; // Check if team exists to determine route
     const method = team ? 'patch' : 'post'; // Use PUT for updates, POST for creating
 
-    form[method](route(routeName, { team: team ? team.id : null }), { // Pass team ID if editing
+    form[method](route(routeName, {team: team ? team.id : null}), { // Pass team ID if editing
         preserveScroll: true,
         onSuccess: () => {
             toast.success('Team ' + (team ? 'updated' : 'created') + ' successfully!');

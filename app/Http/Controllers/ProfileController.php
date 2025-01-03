@@ -36,7 +36,6 @@ class ProfileController extends Controller
     {
         $profile = $request->user()->profile;
         $filePath = $profile->profile_picture ?? 'public/images/profile.png';
-        dd($filePath);
 
         if ($request->hasFile('profile_picture')) {
             $fileUpload = $request->file('profile_picture')->store('profile_pictures', 'public');
