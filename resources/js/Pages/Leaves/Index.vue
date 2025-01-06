@@ -40,7 +40,8 @@ export default {
     data() {
         return {
             eventSettings: {
-                dataSource: []
+                dataSource: [],
+                allowAdding: false
             },
             workDays: [1, 2, 3, 4, 5],
             views: ['Month', 'Day', 'Agenda'],
@@ -272,6 +273,7 @@ export default {
                         :selected-date="selectedDate"
                         height="600px"
                         :eventRendered="onEventRender"
+                        :firstDayOfWeek="1"
                     ></ejs-schedule>
                 </div>
             </div>
