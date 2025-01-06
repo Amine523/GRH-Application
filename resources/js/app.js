@@ -10,11 +10,12 @@ import '@syncfusion/ej2-inputs/styles/material.css';
 import '@syncfusion/ej2-navigations/styles/material.css';
 import '@syncfusion/ej2-popups/styles/material.css';
 import '@syncfusion/ej2-vue-schedule/styles/material.css';
+import './syncfusion-license';
 // Import Inertia.js, Vue, and other libraries
-import { createInertiaApp } from '@inertiajs/vue3'; // Inertia.js for Vue 3
-import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'; // Inertia page resolution
-import { createApp, h } from 'vue'; // Vue.js core functions
-import { ZiggyVue } from '../../vendor/tightenco/ziggy'; // ZiggyVue for route handling
+import {createInertiaApp} from '@inertiajs/vue3'; // Inertia.js for Vue 3
+import {resolvePageComponent} from 'laravel-vite-plugin/inertia-helpers'; // Inertia page resolution
+import {createApp, h} from 'vue'; // Vue.js core functions
+import {ZiggyVue} from '../../vendor/tightenco/ziggy'; // ZiggyVue for route handling
 // Import Toast for alerts
 import Toast from "vue-toastification"; // Toast notifications
 import "vue-toastification/dist/index.css"; // Toast styles
@@ -43,8 +44,8 @@ createInertiaApp({
         ),
 
     // Set up the Vue app instance with PrimeVue and other plugins
-    setup({ el, App, props, plugin }) {
-        const app = createApp({ render: () => h(App, props) })
+    setup({el, App, props, plugin}) {
+        const app = createApp({render: () => h(App, props)})
             .use(plugin) // Inertia plugin
             .use(ZiggyVue) // Ziggy plugin for route handling
             .use(Toast, { // Toast notifications plugin
@@ -52,9 +53,9 @@ createInertiaApp({
                 timeout: 3000,
                 closeOnClick: true,
             })
-            .use(PrimeVue , {
-                theme : {
-                    preset : Lara,
+            .use(PrimeVue, {
+                theme: {
+                    preset: Lara,
                     options: {
                         prefix: 'p',
                         darkModeSelector: '',
