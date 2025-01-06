@@ -20,9 +20,8 @@ use App\Services\LeaveService;
 
 class LeaveController extends Controller
 {
-    protected $leaveRepository;
+    protected LeaveRepository $leaveRepository;
 
-    // Inject LeaveRepository via constructor
     public function __construct(LeaveRepository $leaveRepository)
     {
         $this->leaveRepository = $leaveRepository;
@@ -66,19 +65,13 @@ class LeaveController extends Controller
             return to_route('leave.index')->with('success', 'Vacation request submitted successfully.');
         }
 
-        if ($leaveRequest->type_of_leave == 'authorization') {
-
-            if ($authorizationHours >= $leaveRequest->authorizationHours) {
-                $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
-                return to_route('leave.index')->with('success', 'Authorization request submitted successfully.');
-            } else {
-                $admins = User::role('admin')->get();
-                $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
-                foreach ($admins as $admin) {
-                    Mail::to($admin->email)->send(new LeaveRequestMail($user, 'approved-authorisation'));
-                }
-                return back()->with('error', 'Not enough authorization hours available.');
-            }
+        if ($leaveRequest->type_of_leave == 'authorisation') {
+            $leave = $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
+//            if ($user->team->team_name !== 'softtodo') {
+//                $leave->status_of_leave = 'approved';
+//                $leave->save();
+//            }
+            return to_route('leave.index')->with('success', 'Authorization request submitted successfully.');
         }
 
         if ($validBalance >= $numberOfDays) {
@@ -94,46 +87,17 @@ class LeaveController extends Controller
     /**
      * Approve a leave request.
      */
-    public function approve()
+    public function approve(LeaveService $leaveService)
     {
-
         $request = request()->validate([
             'id' => 'required|integer|exists:leaves,id',
         ]);
-        $leave = Leave::with('user')->find($request['id']);
-        $validBalance = $leave->user->valid_balance;
-        $numberOfDays = $this->leaveRepository->getWeekdaysBetween($leave->start_day, $leave->end_day);
-        $daysToDeduct = match ($leave->type_of_leave) {
-            'halfday' => 0.5,
-            'authorisation' => 0,
-            default => $numberOfDays,
-        };
-        if ($leave->type_of_leave === 'authorisation') {
-            if ($leave->user->authorization_hours >= $leave->authorization_hour) {
-                $leave->user->authorization_hours -= $leave->authorization_hour;
-                $leave->user->save();
-                Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'approved-authorisation'));
-            } else {
-                Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'rejected-authorisation'));
-                return back()->with('error', 'Not enough authorization hours available.');
-            }
-        }
 
-        if ($leave->type_of_leave !== 'authorisation' && $validBalance >= $daysToDeduct) {
-            $leave->user->valid_balance -= $daysToDeduct;
-            $leave->status_of_leave = 'approved';
-            $leave->user->save();
-            $leave->save();
-
-            return to_route('leave.index')->with('success', 'Leave approved successfully.');
-        } else {
-            $leave->user->valid_balance -= $daysToDeduct;
-            $leave->status_of_leave = 'approved';
-            $leave->user->save();
-            $leave->save();
-            Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'approved-extra'));
-
-            return to_route('leave.index')->with('success', 'Leave approved successfully.');
+        try {
+            $leaveService->approve($request['id']);
+            return redirect()->route('leave.index')->with('success', 'Leave approved successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
         }
     }
 
