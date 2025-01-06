@@ -35,7 +35,8 @@ class LeaveService
     /**
      * @throws Exception
      */
-    #[NoReturn] private function handleAuthorisationLeave(Leave $leave): void
+    #[NoReturn]
+    private function handleAuthorisationLeave(Leave $leave): void
     {
         $totalAuthorizationHours = Leave::where('user_id', $leave->user->id)
             ->where('type_of_leave', 'authorisation')
@@ -43,7 +44,14 @@ class LeaveService
 
         $leave->user->authorization_hours -= $leave->authorization_hour;
 
-        if ($totalAuthorizationHours + $leave->authorization_hour >= 6) {
+        $remainingHours = max(0, $totalAuthorizationHours - 2);
+
+        $completedBlocksBefore = intdiv($remainingHours - $leave->authorization_hour, 4);
+
+        $totalAuthorizationHoursAfter = $remainingHours;
+        $completedBlocksAfter = intdiv($totalAuthorizationHoursAfter, 4);
+
+        if ($completedBlocksAfter > $completedBlocksBefore) {
             $leave->user->valid_balance -= 0.5;
         }
 

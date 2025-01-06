@@ -3,20 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\LeaveRequest;
-use App\Http\Requests\UserRequest;
 use App\Mail\LeaveRequestMail;
 use App\Models\Leave;
-use App\Models\Role;
 use App\Models\Team;
 use App\Models\User;
 use App\Repositories\LeaveRepository;
 use Carbon\Carbon;
 use Exception;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
-use function Psy\debug;
 use App\Services\LeaveService;
 
 class LeaveController extends Controller

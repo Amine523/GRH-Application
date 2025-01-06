@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Requests\UserRequest;
 use App\Http\Requests\UserRoleRequest;
+use App\Http\Requests\UserUpdateRequest;
 use App\Mail\BalanceUpdatedMail;
 use App\Mail\WarningUser;
 use App\Mail\WelcomeNewUserMail;
@@ -61,7 +62,7 @@ class UserController extends Controller
             'valide_balance' => 23,
             'team_id' => $userRequest->team_id,
         ]);
-        $user->profile()->create([...$profileUpdateRequest->validated(),'profile_picture'=>$filePath]);
+        $user->profile()->create([...$profileUpdateRequest->validated(), 'profile_picture' => $filePath]);
         $user->assignRole($userRoleRequest->role_id);
         Mail::to($user->email)->send(new WelcomeNewUserMail($user));
         return to_route('user.index');
@@ -101,7 +102,7 @@ class UserController extends Controller
         return to_route('user.index');
     }
 
-    public function update(ProfileUpdateRequest $request, User $user, UserRoleRequest $userRoleRequest, UserRequest $userRequest)
+    public function update(ProfileUpdateRequest $request, User $user, UserRoleRequest $userRoleRequest, UserUpdateRequest $userRequest)
     {
         $profileData = $request->validated();
 
