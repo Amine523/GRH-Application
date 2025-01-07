@@ -338,7 +338,7 @@ export default {
                                         </PrimaryButton>
                                         <PrimaryButton
                                             @click="openRefuseDialog(slotProps.data.id)"
-                                            class="bg-red-600 text-white"
+                                            class="bg-red-600 text-white mr-2"
                                         >
                                             Reject
                                         </PrimaryButton>
