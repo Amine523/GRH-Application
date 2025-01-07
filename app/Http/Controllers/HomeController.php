@@ -16,25 +16,29 @@ class HomeController extends Controller
             ->limit(5)
             ->get()
             ->map(function ($leave) {
-                $user = $leave->user->profile;
-                $firstName = $user->first_name ?? 'N/A';
-                $lastName = $user->last_name ?? 'N/A';
+                $profile = $leave->user->profile;
+                $firstName = $profile->first_name ?? 'N/A';
+                $lastName = $profile->last_name ?? 'N/A';
+                $profilePicture = $profile->profile_picture ?? null;
+
                 return [
                     'id' => $leave->id,
                     'activity' => $firstName . ' ' . $lastName . ' submitted a ' . $leave->type_of_leave . ' request',
-                    'time' => $leave->created_at->diffForHumans()
+                    'time' => $leave->created_at->diffForHumans(),
+                    'profile_picture' => $profilePicture,
                 ];
             });
 
         $inactiveUsers = User::whereDoesntHave('leaves', function ($query) {
             $query->whereDate('start_day', '<=', today())
                 ->whereDate('end_day', '>=', today());
-        })->with(['profile:id,user_id,first_name,last_name'])
-        ->get()
+        })->with(['profile:id,user_id,first_name,last_name,profile_picture'])
+            ->get()
             ->map(function ($user) {
                 return [
                     'first_name' => $user->profile->first_name ?? null,
                     'last_name' => $user->profile->last_name ?? null,
+                    'profile_picture' => $user->profile->profile_picture ?? null,
                 ];
             });
 
@@ -50,17 +54,24 @@ class HomeController extends Controller
 
         $today = now();
 
-        $upcomingEvents = Leave::with('user')
+        $upcomingEvents = Leave::with('user.profile')
             ->whereDate('start_day', '>', $today)
             ->whereDate('start_day', '<=', $today->copy()->addWeek())
             ->get()
             ->map(function ($leave) use ($today) {
+                $profile = $leave->user->profile;
+                $firstName = $profile->first_name ?? 'N/A';
+                $lastName = $profile->last_name ?? 'N/A';
+                $profilePicture = $profile->profile_picture ?? null;
+
                 $startDate = $leave->start_day;
                 $eventDate = $startDate->isSameDay($today->copy()->addDay()) ? 'Tomorrow' : $startDate->format('l, F j');
+
                 return [
-                    'name' => $leave->user->email,
+                    'name' => $firstName . ' ' . $lastName,
+                    'profile_picture' => $profilePicture,
                     'event' => $leave->type_of_leave . ' Leave',
-                    'date' => $eventDate
+                    'date' => $eventDate,
                 ];
             });
 
