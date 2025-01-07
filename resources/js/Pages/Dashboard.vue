@@ -48,14 +48,24 @@ defineProps({
                     <h3 class="text-xl font-semibold text-gray-800">Recent Activities</h3>
                     <ul class="mt-4 space-y-3">
                         <li v-for="activity in recentActivities" :key="activity.id" class="flex items-start gap-4">
+                            <!-- Profile Picture -->
                             <div
-                                class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-500">
-                                <i class="fas fa-bell"></i>
+                                class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                                <img
+                                    v-if="activity.profile_picture"
+                                    :src="activity.profile_picture"
+                                    alt="Profile Picture"
+                                    class="w-full h-full object-cover"
+                                />
+                                <i v-else class="fas fa-user text-gray-400"></i>
                             </div>
-                            <p class="text-gray-700">
-                                {{ activity.activity }} -
-                                <span class="text-sm text-gray-500">{{ activity.time }}</span>
-                            </p>
+                            <!-- Activity Details -->
+                            <div>
+                                <p class="text-gray-700 font-medium">
+                                    {{ activity.activity }}
+                                </p>
+                                <p class="text-sm text-gray-500">{{ activity.time }}</p>
+                            </div>
                         </li>
                     </ul>
                 </div>
@@ -72,10 +82,16 @@ defineProps({
                             class="py-3 flex items-center"
                         >
                             <!-- Profile Picture -->
-                            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-4">
-                                <i class="fas fa-user text-red-500"></i>
+                            <div
+                                class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mr-4 overflow-hidden">
+                                <img
+                                    v-if="user.profile_picture"
+                                    :src="user.profile_picture"
+                                    alt="Profile Picture"
+                                    class="w-full h-full object-cover"
+                                />
+                                <i v-else class="fas fa-user text-gray-400"></i>
                             </div>
-                            <!-- User Information -->
                             <div class="flex-1">
                                 <p class="text-sm font-semibold text-gray-800">
                                     {{ user.first_name }} {{ user.last_name }}
@@ -99,11 +115,18 @@ defineProps({
                             :key="event.name"
                             class="py-3 flex items-center"
                         >
+                            <!-- Profile Picture -->
                             <div
-                                class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-4"
-                            >
-                                <i class="fas fa-user text-blue-500"></i>
+                                class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mr-4 overflow-hidden">
+                                <img
+                                    v-if="event.profile_picture"
+                                    :src="event.profile_picture"
+                                    alt="Profile Picture"
+                                    class="w-full h-full object-cover"
+                                />
+                                <i v-else class="fas fa-user text-gray-400"></i>
                             </div>
+                            <!-- Event Details -->
                             <div>
                                 <p class="text-sm font-medium text-gray-800">{{ event.name }}</p>
                                 <p class="text-sm text-gray-500">
