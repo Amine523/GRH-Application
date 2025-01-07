@@ -222,6 +222,7 @@ export default {
         },
         setEventDataSource() {
             this.eventSettings.dataSource = this.leaves
+                .filter(leave => leave.status_of_leave.toLowerCase() !== 'revoked')
                 .flatMap(leave => {
                     const user = this.users.find(user => user.id === leave.user_id);
                     const userName = user ? user.profile.first_name.toUpperCase() : 'Unknown User';
@@ -251,7 +252,7 @@ export default {
                             });
                         }
 
-                        currentStart = currentWeekEnd.clone().add(3, 'days');
+                        currentStart = currentWeekEnd.clone().add(3, 'days'); // Advance to next week
                     }
 
                     return events;
