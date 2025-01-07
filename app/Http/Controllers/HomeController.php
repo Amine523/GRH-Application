@@ -26,33 +26,34 @@ class HomeController extends Controller
                 ];
             });
 
-        $activeToday = User::whereDoesntHave('leaves', function ($query) {
+        $inactiveUsers = User::whereDoesntHave('leaves', function ($query) {
             $query->whereDate('start_day', '<=', today())
                 ->whereDate('end_day', '>=', today());
-        })->count();
+        })->with(['profile:id,user_id,first_name,last_name'])
+        ->get()
+            ->map(function ($user) {
+                return [
+                    'first_name' => $user->profile->first_name ?? null,
+                    'last_name' => $user->profile->last_name ?? null,
+                ];
+            });
+
+        $activeToday = User::count() - $inactiveUsers->count();
 
         $quickOverview = [
             'totalUsers' => User::count(),
             'activeToday' => $activeToday,
             'leavesApproved' => Leave::where('status_of_leave', 'approved')->whereMonth('created_at', now()->month)->count(),
-            'pendingLeaves' => Leave::where('status_of_leave', 'pending')->count()
-        ];
-
-        // Define quick actions
-        $quickActions = [
-            ['label' => 'Add New User', 'action' => 'addUser'],
-            ['label' => 'Create Announcement', 'action' => 'createAnnouncement'],
-            ['label' => 'Generate Report', 'action' => 'generateReport']
+            'pendingLeaves' => Leave::where('status_of_leave', 'pending')->count(),
+            'inactiveUsers' => $inactiveUsers
         ];
 
         $today = now();
 
-        $today = now();
-
-        $upcomingEvents = Leave::with('user') // Load the user associated with the leave
-        ->whereDate('start_day', '>', $today) // Leave starts in the future
-        ->whereDate('start_day', '<=', $today->copy()->addWeek()) // Leave starts within the next 7 days
-        ->get()
+        $upcomingEvents = Leave::with('user')
+            ->whereDate('start_day', '>', $today)
+            ->whereDate('start_day', '<=', $today->copy()->addWeek())
+            ->get()
             ->map(function ($leave) use ($today) {
                 $startDate = $leave->start_day;
                 $eventDate = $startDate->isSameDay($today->copy()->addDay()) ? 'Tomorrow' : $startDate->format('l, F j');
@@ -66,7 +67,6 @@ class HomeController extends Controller
         return Inertia::render('Dashboard', [
             'recentActivities' => $recentActivities,
             'quickOverview' => $quickOverview,
-            'quickActions' => $quickActions,
             'upcomingEvents' => $upcomingEvents
         ]);
     }
