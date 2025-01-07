@@ -63,7 +63,7 @@ class LeaveController extends Controller
 
         $leave = $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
         if (strtolower(trim($user->team->team_name)) === 'softtodo') {
-            Mail::to($leaveRequest->user->email)
+            Mail::to($user->email)
                 ->cc(['fatma.abid@softtodo.com', 'grh@softtodo.com'])
                 ->send(new LeaveRequestMail('Request submitted without a team assignment.', $leaveRequest->leave_reason));
 
