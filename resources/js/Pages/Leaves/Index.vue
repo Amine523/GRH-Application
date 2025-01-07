@@ -118,7 +118,17 @@ export default {
                 },
             })
         },
-
+        deleteLeave(leaveId) {
+            const leaveData = {
+                id: leaveId,
+            };
+            router.post(route('leave.delete'), leaveData, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    this.refreshLeaves();
+                },
+            })
+        },
         refuseLeave() {
             const leaveData = {
                 id: this.refusedLeave,
@@ -322,25 +332,31 @@ export default {
                                     <template v-if="slotProps.data.status_of_leave === 'pending'">
                                         <PrimaryButton
                                             @click="approveLeave(slotProps.data.id)"
-                                            class="bg-green-600 text-white mr-2"
+                                            class="bg-blue-600 text-white mr-2"
                                         >
-                                            Accept
+                                            Approve
                                         </PrimaryButton>
                                         <PrimaryButton
                                             @click="openRefuseDialog(slotProps.data.id)"
                                             class="bg-red-600 text-white"
                                         >
-                                            Refuse
+                                            Reject
                                         </PrimaryButton>
                                     </template>
                                     <template v-else-if="slotProps.data.status_of_leave !== 'revoked'">
                                         <PrimaryButton
                                             @click="openRevokeDialog(slotProps.data.id)"
-                                            class="bg-yellow-500 text-white"
+                                            class="bg-orange-500 text-white mr-2"
                                         >
                                             Revoke
                                         </PrimaryButton>
                                     </template>
+                                    <PrimaryButton
+                                        @click="deleteLeave(slotProps.data.id)"
+                                        class="bg-gray-600 text-white mr-2"
+                                    >
+                                        Remove
+                                    </PrimaryButton>
                                 </template>
                             </Column>
                         </DataTable>
