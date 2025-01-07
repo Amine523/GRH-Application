@@ -29,15 +29,15 @@ class LeaveController extends Controller
         $user = auth()->user();
 
         if ($user->hasRole('admin')) {
-            $leaves = Leave::with('user')->get();
+            $leaves = Leave::with('user')->orderBy('status_of_leave')->get();
             $users = User::with('profile')->get();
         } elseif ($user->hasRole('project_manager')) {
             $team = Team::with(['users.profile'])->find($user->team_id);
             $users = $team->users;
             $userIds = $users->pluck('id');
-            $leaves = Leave::with('user')->whereIn('user_id', $userIds)->get();
+            $leaves = Leave::with('user')->whereIn('user_id', $userIds)->orderBy('status_of_leave')->get();
         } else {
-            $leaves = Leave::with('user')->where('user_id', $user->id)->get();
+            $leaves = Leave::with('user')->where('user_id', $user->id)->orderBy('status_of_leave')->get();
             $users = User::with('profile')->get();
         }
 
@@ -60,28 +60,37 @@ class LeaveController extends Controller
         $numberOfDays = $this->leaveRepository->getWeekdaysBetween($transformedStartDay, $transformedEndDay);
         $user = auth()->user();
         $validBalance = $user->valid_balance;
-        $authorizationHours = $user->authorization_hours;
 
-        if ($leaveRequest->type_of_leave === 'vacation' && $user->team->team_name !== 'softtodo') {
-            $leave = $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
-            $leaveService->approve($leave->id);
-            return to_route('leave.index')->with('success', 'Vacation request submitted and approved successfully.');
+        $leave = $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
+        if (strtolower(trim($user->team->team_name)) === 'softtodo') {
+            Mail::to($leaveRequest->user->email)
+                ->cc(['fatma.abid@softtodo.com', 'grh@softtodo.com'])
+                ->send(new LeaveRequestMail('Request submitted without a team assignment.', $leaveRequest->leave_reason));
+
+            return back()->with('error', 'You are not assigned to a team. Request submitted and notified for further review.');
         }
 
-        if ($leaveRequest->type_of_leave === 'authorisation') {
-            $leave = $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
-            $leaveService->approve($leave->id);
-            return to_route('leave.index')->with('success', 'Authorization request submitted and approved successfully.');
-        }
+        switch ($leaveRequest->type_of_leave) {
+            case 'vacation':
+                if (strtolower(trim($user->team->team_name)) !== 'softtodo') {
+                    $leaveService->approve($leave->id);
+                    return to_route('leave.index')->with('success', 'Vacation request submitted and approved successfully.');
+                }
+                return to_route('leave.index')->with('success', 'Vacation request submitted successfully.');
 
-        if ($validBalance >= $numberOfDays) {
-            $leave = $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
-            $leaveService->approve($leave->id);
-            return to_route('leave.index')->with('success', 'Leave request submitted and approved successfully.');
-        } else {
-            $leave = $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
-            Mail::to($user->email)->send(new LeaveRequestMail($user->first_name, 'approved-extra'));
-            return back()->with('error', 'Not enough leave balance. Leave submitted but requires further review.');
+            case 'authorisation':
+                if (strtolower(trim($user->team->team_name)) !== 'softtodo') {
+                    $leaveService->approve($leave->id);
+                    return to_route('leave.index')->with('success', 'Authorization request submitted and approved successfully.');
+                }
+                return to_route('leave.index')->with('success', 'Authorization request submitted successfully.');
+
+            default:
+                if (strtolower(trim($user->team->team_name)) !== 'softtodo' && $validBalance >= $numberOfDays) {
+                    $leaveService->approve($leave->id);
+                    return to_route('leave.index')->with('success', 'Leave request submitted and approved successfully.');
+                }
+                return back()->with('error', 'Not enough leave balance. Leave submitted but requires further review.');
         }
     }
 
@@ -115,6 +124,24 @@ class LeaveController extends Controller
         Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'rejected', $leaveReason));
 
         return to_route('leave.index')->with('success', 'Leave request rejected successfully.');
+    }
+
+    public function delete()
+    {
+        $request = request()->validate([
+            'id' => 'required|integer|exists:leaves,id',
+        ]);
+
+        $leave = Leave::findOrFail($request['id']);
+        $leaveDays = Carbon::parse($leave->start_day)->diffInWeekdays(Carbon::parse($leave->end_day)) + 1;
+
+        $user = $leave->user;
+        $user->valid_balance += $leaveDays;
+        $user->save();
+
+        $leave->delete();
+
+        return to_route('leave.index')->with('success', 'Leave request deleted successfully. Balance updated.');
     }
 
     public function revoke(LeaveService $leaveService)

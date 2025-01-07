@@ -17,6 +17,9 @@ class LeaveService
     public function approve(int $leaveId): void
     {
         $leave = Leave::with('user')->findOrFail($leaveId);
+        if ($leave->status_of_leave === 'approved') {
+            return;
+        }
         $numberOfDays = $this->countWorkingDays($leave->start_day, $leave->end_day);
 
         $daysToDeduct = match ($leave->type_of_leave) {

@@ -25,7 +25,17 @@ class TeamController extends Controller
      */
     public function index(): Response
     {
-        $teams = Team::all()->load(['projectManager.profile', 'users.profile']);
+        $user = auth()->user();
+
+        if ($user->hasRole('admin')) {
+            $teams = Team::all()->load(['projectManager.profile', 'users.profile']);
+        } else {
+            $teams = Team::whereHas('users', function ($query) use ($user) {
+                $query->where('users.id', $user->id);
+            })->orWhere('project_manager_id', $user->id)
+                ->get()->load(['projectManager.profile', 'users.profile']);
+        }
+
         $formattedTeams = $teams->map(function ($team) {
             return [
                 'id' => $team->id,
@@ -51,6 +61,7 @@ class TeamController extends Controller
             'teams' => $formattedTeams,
         ]);
     }
+
     /**
      * Store a newly created user in storage.
      */
@@ -58,7 +69,7 @@ class TeamController extends Controller
     {
         $team = Team::create([
             'team_name' => $teamRequest->team_name,
-            'project_manager_id' => $teamRequest->project_manager_id ,
+            'project_manager_id' => $teamRequest->project_manager_id,
         ]);
 
         $projectManager = User::find($teamRequest->project_manager_id);
