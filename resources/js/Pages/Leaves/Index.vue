@@ -222,7 +222,9 @@ export default {
         },
         setEventDataSource() {
             this.eventSettings.dataSource = this.leaves
-                .filter(leave => leave.status_of_leave.toLowerCase() !== 'revoked')
+                .filter(leave =>
+                    !['revoked', 'rejected'].includes(leave.status_of_leave.toLowerCase())
+                )
                 .flatMap(leave => {
                     const user = this.users.find(user => user.id === leave.user_id);
                     const userName = user ? user.profile.first_name.toUpperCase() : 'Unknown User';
