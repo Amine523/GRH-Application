@@ -96,7 +96,7 @@ export default {
             this.isProjectManager = true;
         }
         this.users = this.$attrs.users;
-        this.mappedUsers = this.mapToOptions(this.users, 'profile.first_name', 'id');
+        this.mappedUsers = this.mapToOptions(this.users, ['profile.first_name', 'profile.last_name'], 'id');
         this.setEventDataSource();
     },
     methods: {
@@ -157,10 +157,12 @@ export default {
                 this.leaves = response.data.leaves;
             });
         },
-        mapToOptions(items, labelField, valueField = 'id') {
+        mapToOptions(items, labelFields, valueField = 'id') {
             return items.map(item => ({
                 value: item[valueField],
-                label: this.getNestedValue(item, labelField)
+                label: Array.isArray(labelFields)
+                    ? labelFields.map(field => this.getNestedValue(item, field)).join(' ')
+                    : this.getNestedValue(item, labelFields)
             }));
         },
         onEventRender(args) {
