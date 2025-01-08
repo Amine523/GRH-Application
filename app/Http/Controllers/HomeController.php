@@ -9,7 +9,7 @@ use App\Models\User;
 
 class HomeController extends Controller
 {
-    public function index()
+    public function adminIndex()
     {
         $recentActivities = Leave::with('user.profile')
             ->orderBy('created_at', 'desc')
@@ -79,6 +79,23 @@ class HomeController extends Controller
             'recentActivities' => $recentActivities,
             'quickOverview' => $quickOverview,
             'upcomingEvents' => $upcomingEvents
+        ]);
+    }
+
+    public function index()
+    {
+        $user = auth()->user();
+
+        $leaveCredits = [
+            'sick' => $user->leaves()->where('type_of_leave', 'sick')->count(),
+            'vacation' => $user->leaves()->where('type_of_leave', 'vacation')->count(),
+            'authorization' => $user->leaves()->where('type_of_leave', 'authorization')->count(),
+            'halfDay' => $user->leaves()->where('type_of_leave', 'half day')->count(),
+            'remaining' => $user->valid_balance,
+        ];
+
+        return Inertia::render('UserDashboard', [
+            'leaveCredits' => $leaveCredits,
         ]);
     }
 }
