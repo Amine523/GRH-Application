@@ -16,9 +16,13 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', [HomeController::class, 'index'])
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+Route::get('/dashboard', function () {
+    if (auth()->user()->hasRole('admin')) {
+        return app(HomeController::class)->adminIndex();
+    } else {
+        return app(HomeController::class)->index();
+    }
+})->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     // for profile routing
