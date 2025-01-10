@@ -137,6 +137,7 @@ class LeaveController extends Controller
         if ($leave->type_of_leave === 'authorisation') {
             $totalAuthorizationHours = Leave::where('user_id', $leave->user->id)
                 ->where('type_of_leave', 'authorisation')
+                ->where('status_of_leave', 'approved')
                 ->sum('authorization_hour');
 
             $leave->user->authorization_hours -= $leave->authorization_hour;
@@ -166,21 +167,46 @@ class LeaveController extends Controller
 
     public function revoke(LeaveService $leaveService)
     {
-        $request = request()->all();
-        $leave = Leave::find($request['id']);
-        $revokeReason = request()->revokeReason;
+        $request = request()->validate([
+            'id' => 'required|integer|exists:leaves,id',
+            'revokeReason' => 'required|string|max:255',
+        ]);
 
-        $leaveDays = $leaveService->countWorkingDays($leave->start_day, $leave->end_day);
+        $leave = Leave::findOrFail($request['id']);
+        $revokeReason = $request['revokeReason'];
 
-        $user = $leave->user;
-        $user->valid_balance += $leaveDays;
-        $user->save();
+        if ($leave->type_of_leave === 'authorisation') {
+            $totalAuthorizationHours = Leave::where('user_id', $leave->user->id)
+                ->where('type_of_leave', 'authorisation')
+                ->where('status_of_leave', 'approved')
+                ->sum('authorization_hour');
+
+            $leave->user->authorization_hours -= $leave->authorization_hour;
+
+            $remainingHours = max(0, $totalAuthorizationHours - 2);
+
+
+            $completedBlocksBefore = intdiv($remainingHours - $leave->authorization_hour, 4);
+
+            $totalAuthorizationHoursAfter = $remainingHours;
+            $completedBlocksAfter = intdiv($totalAuthorizationHoursAfter, 4);
+
+
+            if ($completedBlocksAfter > $completedBlocksBefore) {
+                $leave->user->valid_balance += 0.5;
+            }
+        } else {
+            $leaveDays = $leaveService->countWorkingDays($leave->start_day, $leave->end_day);
+            $leave->user->valid_balance += $leaveDays;
+        }
+
+        $leave->user->save();
 
         $leave->status_of_leave = 'revoked';
         $leave->save();
 
-        Mail::to($user->email)->send(new LeaveRequestMail($user->profile->first_name, 'revoke', $revokeReason));
+        Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'revoke', $revokeReason));
 
-        return to_route('leave.index')->with('success', 'Leave request revoked successfully.');
+        return to_route('leave.index')->with('success', 'Leave request revoked successfully. Balance updated.');
     }
 }

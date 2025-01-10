@@ -148,6 +148,7 @@ export default {
             router.post(route('leave.revoke'), leaveData, {
                 preserveScroll: true,
                 onSuccess: () => {
+                    this.closeDialog();
                     this.refreshLeaves();
                 },
             });
