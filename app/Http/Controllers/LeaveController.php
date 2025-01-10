@@ -133,12 +133,32 @@ class LeaveController extends Controller
         ]);
 
         $leave = Leave::findOrFail($request['id']);
-        $leaveDays = Carbon::parse($leave->start_day)->diffInWeekdays(Carbon::parse($leave->end_day)) + 1;
 
-        $user = $leave->user;
-        $user->valid_balance += $leaveDays;
-        $user->save();
+        if ($leave->type_of_leave === 'authorisation') {
+            $totalAuthorizationHours = Leave::where('user_id', $leave->user->id)
+                ->where('type_of_leave', 'authorisation')
+                ->sum('authorization_hour');
 
+            $leave->user->authorization_hours -= $leave->authorization_hour;
+
+            $remainingHours = max(0, $totalAuthorizationHours - 2);
+
+
+            $completedBlocksBefore = intdiv($remainingHours - $leave->authorization_hour, 4);
+
+            $totalAuthorizationHoursAfter = $remainingHours;
+            $completedBlocksAfter = intdiv($totalAuthorizationHoursAfter, 4);
+
+
+            if ($completedBlocksAfter > $completedBlocksBefore) {
+                $leave->user->valid_balance += 0.5;
+            }
+        } else {
+            $leaveDays = Carbon::parse($leave->start_day)->diffInWeekdays(Carbon::parse($leave->end_day)) + 1;
+            $leave->user->valid_balance += $leaveDays;
+        }
+
+        $leave->user->save();
         $leave->delete();
 
         return to_route('leave.index')->with('success', 'Leave request deleted successfully. Balance updated.');
