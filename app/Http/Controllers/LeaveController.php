@@ -135,24 +135,11 @@ class LeaveController extends Controller
         $leave = Leave::findOrFail($request['id']);
 
         if ($leave->type_of_leave === 'authorisation') {
-            $totalAuthorizationHours = Leave::where('user_id', $leave->user->id)
-                ->where('type_of_leave', 'authorisation')
-                ->where('status_of_leave', 'approved')
-                ->sum('authorization_hour');
+            $leave->user->authorization_hours += $leave->authorization_hour;
 
-            $leave->user->authorization_hours -= $leave->authorization_hour;
-
-            $remainingHours = max(0, $totalAuthorizationHours - 2);
-
-
-            $completedBlocksBefore = intdiv($remainingHours - $leave->authorization_hour, 4);
-
-            $totalAuthorizationHoursAfter = $remainingHours;
-            $completedBlocksAfter = intdiv($totalAuthorizationHoursAfter, 4);
-
-
-            if ($completedBlocksAfter > $completedBlocksBefore) {
+            if ($leave->user->authorization_hours > 0) {
                 $leave->user->valid_balance += 0.5;
+                $leave->user->authorization_hours -= (4 + $leave->authorization_hour);
             }
         } else {
             $leaveDays = Carbon::parse($leave->start_day)->diffInWeekdays(Carbon::parse($leave->end_day)) + 1;
@@ -176,24 +163,11 @@ class LeaveController extends Controller
         $revokeReason = $request['revokeReason'];
 
         if ($leave->type_of_leave === 'authorisation') {
-            $totalAuthorizationHours = Leave::where('user_id', $leave->user->id)
-                ->where('type_of_leave', 'authorisation')
-                ->where('status_of_leave', 'approved')
-                ->sum('authorization_hour');
+            $leave->user->authorization_hours += $leave->authorization_hour;
 
-            $leave->user->authorization_hours -= $leave->authorization_hour;
-
-            $remainingHours = max(0, $totalAuthorizationHours - 2);
-
-
-            $completedBlocksBefore = intdiv($remainingHours - $leave->authorization_hour, 4);
-
-            $totalAuthorizationHoursAfter = $remainingHours;
-            $completedBlocksAfter = intdiv($totalAuthorizationHoursAfter, 4);
-
-
-            if ($completedBlocksAfter > $completedBlocksBefore) {
+            if ($leave->user->authorization_hours > 0) {
                 $leave->user->valid_balance += 0.5;
+                $leave->user->authorization_hours -= (4 + $leave->authorization_hour);
             }
         } else {
             $leaveDays = $leaveService->countWorkingDays($leave->start_day, $leave->end_day);
