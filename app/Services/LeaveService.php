@@ -44,6 +44,7 @@ class LeaveService
 
         $monthlyAuthorizationCount = Leave::where('user_id', $user->id)
             ->where('type_of_leave', 'authorisation')
+            ->where('status_of_leave', 'approved')
             ->whereYear('created_at', now()->year)
             ->whereMonth('created_at', now()->month)
             ->count();
