@@ -1,6 +1,7 @@
 <script>
 import {ref} from 'vue';
 import {DatePickerComponent} from '@syncfusion/ej2-vue-calendars';
+import {TimePickerComponent} from '@syncfusion/ej2-vue-calendars';
 import {RadioButtonComponent} from '@syncfusion/ej2-vue-buttons';
 import {SliderComponent} from '@syncfusion/ej2-vue-inputs';
 import {DialogComponent} from '@syncfusion/ej2-vue-popups';
@@ -22,6 +23,7 @@ export default {
         PrimaryButton,
         'ejs-schedule': ScheduleComponent,
         'ejs-datepicker': DatePickerComponent,
+        'ejs-timepicker': TimePickerComponent,
         'ejs-radiobutton': RadioButtonComponent,
         'ejs-slider': SliderComponent,
         'ejs-dialog': DialogComponent,
@@ -57,12 +59,15 @@ export default {
             revokeReason: null,
             type_of_leave: '',
             start_day: null,
+            start_time: null,
             end_day: null,
             authorisationHours: 0,
             team_user: null,
             users: [],
             mappedUsers: [],
             selectedProducts: [],
+            minTime: new Date('1970-01-01T08:00:00'),
+            maxTime: new Date('1970-01-01T17:00:00'),
             filters: {
                 global: {value: ''}
             },
@@ -81,6 +86,7 @@ export default {
                     first_name: user ? user.profile.first_name : 'Unknown',
                     last_name: user ? user.profile.last_name : 'User',
                     start_day: leave.start_day,
+                    start_time: leave.start_time,
                     end_day: leave.end_day,
                     type_of_leave: leave.type_of_leave,
                     status_of_leave: leave.status_of_leave
@@ -171,7 +177,9 @@ export default {
                 args.element.style.backgroundColor = 'orange';
             } else if (args.data.Status === 'approved') {
                 if (args.data.Subject.includes('authorisation')) {
-                    args.element.style.backgroundColor = 'blue';
+                    args.element.style.backgroundColor = '#205fa9';
+                } else if (args.data.Subject.includes('sick')) {
+                    args.element.style.backgroundColor = '#203b48';
                 } else {
                     args.element.style.backgroundColor = 'green';
                 }
@@ -210,6 +218,7 @@ export default {
             const leaveData = {
                 type_of_leave: this.type_of_leave,
                 start_day: this.start_day,
+                start_time: this.start_time,
                 end_day: this.end_day,
                 authorisationHours: this.type_of_leave === 'authorisation' ? String(this.authorisationHours) : null,
                 user_id: this.team_user ? this.team_user : this.$attrs.auth.user.id,
@@ -231,13 +240,18 @@ export default {
                 .flatMap(leave => {
                     const user = this.users.find(user => user.id === leave.user_id);
                     const userName = user ? user.profile.first_name.toUpperCase() : 'Unknown User';
-
+                    let subject = '';
                     const startDate = moment(leave.start_day, 'DD/MM/YYYY');
                     const endDate = moment(leave.end_day, 'DD/MM/YYYY');
 
                     const events = [];
                     let currentStart = startDate.clone();
 
+                    if(leave.type_of_leave === 'authorisation' && leave.start_time) {
+                        subject = leave.type_of_leave + ' '+ leave.start_time  + ': ' + userName;
+                    } else {
+                        subject = leave.type_of_leave + ': ' + userName;
+                    }
                     while (currentStart.isSameOrBefore(endDate)) {
                         const currentWeekEnd = moment.min(
                             currentStart.clone().day(5),
@@ -247,7 +261,7 @@ export default {
                         if (currentStart.day() !== 0 && currentStart.day() !== 6) {
                             events.push({
                                 Id: leave.id,
-                                Subject: `${leave.type_of_leave} for ${userName} Status: ${leave.status_of_leave.toUpperCase()}`,
+                                Subject: `${subject}`,
                                 StartTime: currentStart.format('MM/DD/YYYY'),
                                 EndTime: currentWeekEnd.clone().add(1, 'day').format('MM/DD/YYYY'),
                                 Status: leave.status_of_leave,
@@ -269,16 +283,17 @@ export default {
 
 <template>
     <Head title="Leave Request"/>
-
     <AuthenticatedLayout>
-        <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">Leave Request</h2>
-        </template>
-
         <div class="py-12">
             <div class="mx-auto space-y-6 sm:px-6 lg:px-8">
                 <div class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                    <div class="flex justify-end py-5 gap-2">
+                    <div class="flex justify-between py-5 gap-2">
+                        <div class="flex gap-5">
+                            <div class="manuel-item flex gap-2 items-center"><span class="is-square is-green-square"></span> Vacation Leave</div>
+                          <div class="manuel-item flex gap-2 items-center"><span class="is-square is-darkBlue-square"></span> Sick Leave</div>
+                          <div class="manuel-item flex gap-2 items-center"><span class="is-square is-blue-square"></span> Autorisation</div>
+                          <div class="manuel-item flex gap-2 items-center"><span class="is-square is-orange-square"></span> Pending Request</div>
+                        </div>
                         <PrimaryButton @click="openDialog" class="bg-green-600 text-white">
                             Add Leave Request
                         </PrimaryButton>
@@ -287,7 +302,7 @@ export default {
                         :event-settings="eventSettings"
                         :views="views"
                         :selected-date="selectedDate"
-                        height="600px"
+                        height="750px"
                         :eventRendered="onEventRender"
                         :firstDayOfWeek="1"
                     ></ejs-schedule>
@@ -434,6 +449,11 @@ export default {
                         <label>Date:</label>
                         <ejs-datepicker v-model="start_day" :firstDayOfWeek='1'
                                         :renderDayCell="disableWeekends"></ejs-datepicker>
+                    </div>
+
+                    <div v-if="type_of_leave === 'authorisation'">
+                        <label>Time:</label>
+                        <ejs-timepicker :min="minTime" :max="maxTime" :value="minTime" v-model="start_time"></ejs-timepicker>
                     </div>
 
                     <!-- Slider for authorisation hours -->
