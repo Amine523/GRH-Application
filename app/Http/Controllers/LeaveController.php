@@ -29,7 +29,7 @@ class LeaveController extends Controller
         $user = auth()->user();
 
         if ($user->hasRole('admin')) {
-            $leaves = Leave::with('user')->orderBy('status_of_leave')->get();
+            $leaves = Leave::with('user')->orderBy('id', 'desc')->get();
             $users = User::with('profile')->get();
         } elseif ($user->hasRole('project_manager')) {
             $team = Team::with(['users.profile'])->find($user->team_id);
@@ -52,16 +52,17 @@ class LeaveController extends Controller
      */
     public function store(LeaveRequest $leaveRequest, LeaveService $leaveService)
     {
+
         $transformedStartDay = Carbon::parse($leaveRequest->start_day)->addDay();
         $transformedEndDay = $leaveRequest->end_day
             ? Carbon::parse($leaveRequest->end_day)->addDay()
             : $transformedStartDay;
-
+        $transformedstartTime = Carbon::parse($leaveRequest->start_time)->format('H:i');
         $numberOfDays = $this->leaveRepository->getWeekdaysBetween($transformedStartDay, $transformedEndDay);
         $user = auth()->user();
         $validBalance = $user->valid_balance;
 
-        $leave = $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay);
+        $leave = $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay, $transformedstartTime);
         if (strtolower(trim($user->team->team_name)) === 'softtodo') {
             Mail::to($user->email)
                 ->cc(['fatma.abid@softtodo.com', 'grh@softtodo.com'])
