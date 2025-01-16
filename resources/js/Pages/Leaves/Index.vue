@@ -454,7 +454,7 @@ export default {
 
                     <div v-if="type_of_leave === 'authorisation'">
                         <label>Time:</label>
-                        <ejs-timepicker :min="minTime" :max="maxTime" :value="minTime" v-model="start_time"></ejs-timepicker>
+                        <ejs-timepicker :min="minTime" :max="maxTime" v-model="start_time"></ejs-timepicker>
                     </div>
 
                     <!-- Slider for authorisation hours -->
