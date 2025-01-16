@@ -250,8 +250,7 @@ export default {
                     let currentStart = startDate.clone();
 
                     if(leave.type_of_leave === 'authorisation' && leave.start_time) {
-                        console.log(leave.authorisation_hour);
-                        subject = leave.start_time  + ' ('+ String(leave.authorisation_hour) +'hour(s)): ' + userName;
+                        subject = leave.start_time  + ' ('+ String(leave.authorization_hour) +'hour(s)): ' + userName;
                     } else {
                         subject = userName;
                     }
