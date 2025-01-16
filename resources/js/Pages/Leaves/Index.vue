@@ -249,8 +249,7 @@ export default {
                     let currentStart = startDate.clone();
 
                     if(leave.type_of_leave === 'authorisation' && leave.start_time) {
-                        console.log(leave.authorisation_hour);
-                        subject = leave.start_time  + ' ('+ String(leave.authorisation_hour) +'hour(s)): ' + userName;
+                        subject = leave.start_time  + ' ('+ String(leave.authorization_hour).replace(".00", "") +'hour(s)): ' + userName;
                     } else {
                         subject = userName;
                     }
@@ -289,8 +288,8 @@ export default {
         <div class="py-12">
             <div class="mx-auto space-y-6 sm:px-6 lg:px-8">
                 <div class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                    <div class="flex justify-between py-5 gap-2">
-                        <div class="flex gap-5">
+                    <div class="flex justify-between items-center py-5 gap-2">
+                        <div class="md:flex gap-5">
                             <div class="manuel-item flex gap-2 items-center"><span class="is-square is-green-square"></span> Vacation Leave</div>
                           <div class="manuel-item flex gap-2 items-center"><span class="is-square is-darkBlue-square"></span> Sick Leave</div>
                           <div class="manuel-item flex gap-2 items-center"><span class="is-square is-blue-square"></span> Autorisation</div>

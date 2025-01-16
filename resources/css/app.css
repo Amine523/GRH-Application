@@ -2,6 +2,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+body > div:nth-child(2){
+    display: none;
+}
+
+body > div:nth-child(3){
+    display: none;
+}
 span.is-square {
     width: 15px;
     height: 15px;
