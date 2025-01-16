@@ -58,6 +58,7 @@ export default {
             revokedLeave: null,
             revokeReason: null,
             type_of_leave: '',
+            authorisation_hour: '',
             start_day: null,
             start_time: null,
             end_day: null,
@@ -67,7 +68,7 @@ export default {
             mappedUsers: [],
             selectedProducts: [],
             minTime: new Date('1970-01-01T08:00:00'),
-            maxTime: new Date('1970-01-01T17:00:00'),
+            maxTime: new Date('1970-01-01T16:00:00'),
             filters: {
                 global: {value: ''}
             },
@@ -89,7 +90,8 @@ export default {
                     start_time: leave.start_time,
                     end_day: leave.end_day,
                     type_of_leave: leave.type_of_leave,
-                    status_of_leave: leave.status_of_leave
+                    status_of_leave: leave.status_of_leave,
+                    authorization_hour: leave.authorization_hour,
                 };
             });
         }
@@ -176,9 +178,9 @@ export default {
             if (args.data.Status === 'pending') {
                 args.element.style.backgroundColor = 'orange';
             } else if (args.data.Status === 'approved') {
-                if (args.data.Subject.includes('authorisation')) {
+                if (args.data.Type === 'authorisation') {
                     args.element.style.backgroundColor = '#205fa9';
-                } else if (args.data.Subject.includes('sick')) {
+                } else if (args.data.Type === 'sick') {
                     args.element.style.backgroundColor = '#203b48';
                 } else {
                     args.element.style.backgroundColor = 'green';
@@ -239,7 +241,7 @@ export default {
                 )
                 .flatMap(leave => {
                     const user = this.users.find(user => user.id === leave.user_id);
-                    const userName = user ? user.profile.first_name.toUpperCase() : 'Unknown User';
+                    const userName = user ? user.profile.first_name.toUpperCase() + ' ' + user.profile.last_name : 'Unknown User';
                     let subject = '';
                     const startDate = moment(leave.start_day, 'DD/MM/YYYY');
                     const endDate = moment(leave.end_day, 'DD/MM/YYYY');
@@ -248,9 +250,9 @@ export default {
                     let currentStart = startDate.clone();
 
                     if(leave.type_of_leave === 'authorisation' && leave.start_time) {
-                        subject = leave.type_of_leave + ' '+ leave.start_time  + ': ' + userName;
+                        subject = leave.start_time  + ' ('+ String(leave.authorization_hour) +'hour(s)): ' + userName;
                     } else {
-                        subject = leave.type_of_leave + ': ' + userName;
+                        subject = userName;
                     }
                     while (currentStart.isSameOrBefore(endDate)) {
                         const currentWeekEnd = moment.min(
