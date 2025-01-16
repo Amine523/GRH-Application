@@ -289,8 +289,8 @@ export default {
         <div class="py-12">
             <div class="mx-auto space-y-6 sm:px-6 lg:px-8">
                 <div class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                    <div class="flex justify-between py-5 gap-2">
-                        <div class="flex gap-5">
+                    <div class="flex justify-between items-center py-5 gap-2">
+                        <div class="md:flex gap-5">
                             <div class="manuel-item flex gap-2 items-center"><span class="is-square is-green-square"></span> Vacation Leave</div>
                           <div class="manuel-item flex gap-2 items-center"><span class="is-square is-darkBlue-square"></span> Sick Leave</div>
                           <div class="manuel-item flex gap-2 items-center"><span class="is-square is-blue-square"></span> Autorisation</div>
@@ -455,7 +455,7 @@ export default {
 
                     <div v-if="type_of_leave === 'authorisation'">
                         <label>Time:</label>
-                        <ejs-timepicker :min="minTime" :max="maxTime" :value="minTime" v-model="start_time"></ejs-timepicker>
+                        <ejs-timepicker :min="minTime" :max="maxTime" v-model="start_time"></ejs-timepicker>
                     </div>
 
                     <!-- Slider for authorisation hours -->
