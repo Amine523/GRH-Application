@@ -38,31 +38,33 @@ class LeaveService
     /**
      * @throws Exception
      */
-    #[NoReturn]
     private function handleAuthorisationLeave(Leave $leave): void
     {
-        $totalAuthorizationHours = Leave::where('user_id', $leave->user->id)
+        $user = $leave->user;
+
+        $monthlyAuthorizationCount = Leave::where('user_id', $user->id)
             ->where('type_of_leave', 'authorisation')
-            ->sum('authorization_hour');
+            ->where('status_of_leave', 'approved')
+            ->whereYear('created_at', now()->year)
+            ->whereMonth('created_at', now()->month)
+            ->count();
 
-        $leave->user->authorization_hours -= $leave->authorization_hour;
+        if ($monthlyAuthorizationCount === 0) {
+            $user->authorization_hours = 2;
+        }
 
-        $remainingHours = max(0, $totalAuthorizationHours - 2);
+        $user->authorization_hours -= $leave->authorization_hour;
 
-        $completedBlocksBefore = intdiv($remainingHours - $leave->authorization_hour, 4);
-
-        $totalAuthorizationHoursAfter = $remainingHours;
-        $completedBlocksAfter = intdiv($totalAuthorizationHoursAfter, 4);
-
-        if ($completedBlocksAfter > $completedBlocksBefore) {
-            $leave->user->valid_balance -= 0.5;
+        if ($user->authorization_hours <= -4) {
+            $user->valid_balance -= 0.5;
+            $user->authorization_hours += 4;
         }
 
         $leave->status_of_leave = 'approved';
-        $leave->user->save();
+        $user->save();
         $leave->save();
 
-        Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'approved-authorisation'));
+        Mail::to($user->email)->send(new LeaveRequestMail($user->profile->first_name, 'approved-authorisation'));
     }
 
     /**
