@@ -35,9 +35,9 @@ class LeaveController extends Controller
             $team = Team::with(['users.profile'])->find($user->team_id);
             $users = $team->users;
             $userIds = $users->pluck('id');
-            $leaves = Leave::with('user')->whereIn('user_id', $userIds)->orderBy('status_of_leave')->get();
+            $leaves = Leave::with('user')->whereIn('user_id', $userIds)->orderBy('id', 'desc')->get();
         } else {
-            $leaves = Leave::with('user')->where('user_id', $user->id)->orderBy('status_of_leave')->get();
+            $leaves = Leave::with('user')->where('user_id', $user->id)->orderBy('id', 'desc')->get();
             $users = User::with('profile')->get();
         }
 
