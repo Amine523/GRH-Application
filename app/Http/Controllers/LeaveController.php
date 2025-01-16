@@ -138,9 +138,14 @@ class LeaveController extends Controller
         if ($leave->type_of_leave === 'authorisation') {
             $leave->user->authorization_hours += $leave->authorization_hour;
 
-            if ($leave->user->authorization_hours > 0) {
+            if ($leave->user->authorization_hours >= 6) {
                 $leave->user->valid_balance += 0.5;
-                $leave->user->authorization_hours -= (4 + $leave->authorization_hour);
+                $leave->user->authorization_hours -= 6;
+            }
+
+            while ($leave->user->authorization_hours >= 4) {
+                $leave->user->valid_balance += 0.5;
+                $leave->user->authorization_hours -= 4;
             }
         } elseif ($leave->type_of_leave === 'halfday') {
             $leave->user->valid_balance += 0.5;
@@ -168,9 +173,14 @@ class LeaveController extends Controller
         if ($leave->type_of_leave === 'authorisation') {
             $leave->user->authorization_hours += $leave->authorization_hour;
 
-            if ($leave->user->authorization_hours > 0) {
+            if ($leave->user->authorization_hours >= 6) {
                 $leave->user->valid_balance += 0.5;
-                $leave->user->authorization_hours -= (4 + $leave->authorization_hour);
+                $leave->user->authorization_hours -= 6;
+            }
+
+            while ($leave->user->authorization_hours >= 4) {
+                $leave->user->valid_balance += 0.5;
+                $leave->user->authorization_hours -= 4;
             }
         } else {
             $leaveDays = $leaveService->countWorkingDays($leave->start_day, $leave->end_day);
