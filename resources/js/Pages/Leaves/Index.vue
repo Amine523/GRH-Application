@@ -156,6 +156,7 @@ export default {
             router.post(route('leave.revoke'), leaveData, {
                 preserveScroll: true,
                 onSuccess: () => {
+                    this.closeDialog();
                     this.refreshLeaves();
                 },
             });
@@ -249,7 +250,7 @@ export default {
                     let currentStart = startDate.clone();
 
                     if(leave.type_of_leave === 'authorisation' && leave.start_time) {
-                        subject = leave.start_time  + ' ('+ String(leave.authorization_hour).replace(".00", "") +'hour(s)): ' + userName;
+                        subject = leave.start_time  + ' ('+ String(leave.authorization_hour) +'hour(s)): ' + userName;
                     } else {
                         subject = userName;
                     }
