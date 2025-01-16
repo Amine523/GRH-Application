@@ -52,7 +52,6 @@ class LeaveController extends Controller
      */
     public function store(LeaveRequest $leaveRequest, LeaveService $leaveService)
     {
-
         $transformedStartDay = Carbon::parse($leaveRequest->start_day)->addDay();
         $transformedEndDay = $leaveRequest->end_day
             ? Carbon::parse($leaveRequest->end_day)->addDay()
@@ -63,13 +62,14 @@ class LeaveController extends Controller
         $validBalance = $user->valid_balance;
 
         $leave = $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay, $transformedstartTime);
-        if (strtolower(trim($user->team->team_name)) === 'softtodo') {
-            Mail::to($user->email)
-                ->cc(['fatma.abid@softtodo.com', 'grh@softtodo.com'])
-                ->send(new LeaveRequestMail('Request submitted without a team assignment.', $leaveRequest->leave_reason));
 
-            return back()->with('error', 'You are not assigned to a team. Request submitted and notified for further review.');
-        }
+        Mail::to(['grh@softtodo.com', 'fatma.abid@softtodo.com'])
+            ->send(new LeaveRequestMail(
+                $user->first_name,
+                'request',
+                $leaveRequest->leave_reason,
+                $numberOfDays
+            ));
 
         switch ($leaveRequest->type_of_leave) {
             case 'vacation':
