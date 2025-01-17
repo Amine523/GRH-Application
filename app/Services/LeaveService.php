@@ -42,23 +42,28 @@ class LeaveService
     {
         $user = $leave->user;
 
-        $monthlyAuthorizationCount = Leave::where('user_id', $user->id)
+        $monthlyAuthorizationHours = Leave::where('user_id', $user->id)
             ->where('type_of_leave', 'authorisation')
             ->where('status_of_leave', 'approved')
             ->whereYear('created_at', now()->year)
             ->whereMonth('created_at', now()->month)
-            ->count();
+            ->sum('authorization_hour');
 
-        if ($monthlyAuthorizationCount === 0) {
-            $user->authorization_hours = 2;
+        if ($monthlyAuthorizationHours === 0) {
+            $user->authorization_hours = 0;
         }
 
-        $user->authorization_hours -= $leave->authorization_hour;
+        $totalHoursWithCurrentLeave = $user->authorization_hours + $leave->authorization_hour;
 
-        if ($user->authorization_hours <= -4) {
+        if ($totalHoursWithCurrentLeave > 6) {
+            throw new Exception('User has already reached the monthly limit of 6 authorization hours.');
+        }
+
+        if ($totalHoursWithCurrentLeave == 6) {
             $user->valid_balance -= 0.5;
-            $user->authorization_hours += 4;
         }
+
+        $user->authorization_hours = $totalHoursWithCurrentLeave;
 
         $leave->status_of_leave = 'approved';
         $user->save();

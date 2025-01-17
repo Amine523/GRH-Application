@@ -134,66 +134,24 @@ class LeaveController extends Controller
         ]);
 
         $leave = Leave::findOrFail($request['id']);
+        $user = $leave->user;
 
         if ($leave->type_of_leave === 'authorisation') {
-            $leave->user->authorization_hours += $leave->authorization_hour;
-
-            if ($leave->user->authorization_hours >= 6) {
-                $leave->user->valid_balance += 0.5;
-                $leave->user->authorization_hours -= 6;
+            if ($user->authorization_hours == 6) {
+                $user->valid_balance += 0.5;
             }
 
-            while ($leave->user->authorization_hours >= 4) {
-                $leave->user->valid_balance += 0.5;
-                $leave->user->authorization_hours -= 4;
-            }
+            $user->authorization_hours -= $leave->authorization_hour;
         } elseif ($leave->type_of_leave === 'halfday') {
-            $leave->user->valid_balance += 0.5;
+            $user->valid_balance += 0.5;
         } else {
-            $leaveDays = Carbon::parse($leave->start_day)->diffInWeekdays(Carbon::parse($leave->end_day)) + 1;
-            $leave->user->valid_balance += $leaveDays;
+            $leaveDays = Carbon::parse($leave->start_day)
+                    ->diffInWeekdays(Carbon::parse($leave->end_day)) + 1;
+            $user->valid_balance += $leaveDays;
         }
-
-        $leave->user->save();
+        $user->save();
         $leave->delete();
 
         return to_route('leave.index')->with('success', 'Leave request deleted successfully. Balance updated.');
-    }
-
-    public function revoke(LeaveService $leaveService)
-    {
-        $request = request()->validate([
-            'id' => 'required|integer|exists:leaves,id',
-            'revokeReason' => 'required|string|max:255',
-        ]);
-
-        $leave = Leave::findOrFail($request['id']);
-        $revokeReason = $request['revokeReason'];
-
-        if ($leave->type_of_leave === 'authorisation') {
-            $leave->user->authorization_hours += $leave->authorization_hour;
-
-            if ($leave->user->authorization_hours >= 6) {
-                $leave->user->valid_balance += 0.5;
-                $leave->user->authorization_hours -= 6;
-            }
-
-            while ($leave->user->authorization_hours >= 4) {
-                $leave->user->valid_balance += 0.5;
-                $leave->user->authorization_hours -= 4;
-            }
-        } else {
-            $leaveDays = $leaveService->countWorkingDays($leave->start_day, $leave->end_day);
-            $leave->user->valid_balance += $leaveDays;
-        }
-
-        $leave->user->save();
-
-        $leave->status_of_leave = 'revoked';
-        $leave->save();
-
-        Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'revoke', $revokeReason));
-
-        return to_route('leave.index')->with('success', 'Leave request revoked successfully. Balance updated.');
     }
 }
