@@ -56,7 +56,7 @@ class LeaveController extends Controller
         $transformedEndDay = $leaveRequest->end_day
             ? Carbon::parse($leaveRequest->end_day)->addDay()
             : $transformedStartDay;
-        $transformedstartTime = Carbon::parse($leaveRequest->start_time)->format('H:i');
+        $transformedstartTime = Carbon::parse($leaveRequest->start_time)->addHour(1)->format('H:i');
         $numberOfDays = $this->leaveRepository->getWeekdaysBetween($transformedStartDay, $transformedEndDay);
         $user = auth()->user();
         $validBalance = $user->valid_balance;
