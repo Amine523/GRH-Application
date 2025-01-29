@@ -11,66 +11,71 @@ class HomeController extends Controller
 {
     public function adminIndex()
     {
-        $recentActivities = Leave::with('user.profile')
-            ->orderBy('created_at', 'desc')
+        $today = now();
+        $oneWeekFromNow = $today->copy()->addWeek();
+
+        // Fetch recent activities efficiently
+        $recentActivities = Leave::with(['user.profile:id,user_id,first_name,last_name,profile_picture'])
+            ->latest()
             ->limit(5)
             ->get()
             ->map(function ($leave) {
-                $profile = $leave->user->profile;
-                $firstName = $profile->first_name ?? 'N/A';
-                $lastName = $profile->last_name ?? 'N/A';
-                $profilePicture = $profile->profile_picture ?? null;
+                $profile = optional($leave->user->profile);
 
                 return [
                     'id' => $leave->id,
-                    'activity' => $firstName . ' ' . $lastName . ' submitted a ' . $leave->type_of_leave . ' request',
+                    'activity' => "{$profile->first_name} {$profile->last_name} submitted a {$leave->type_of_leave} request",
                     'time' => $leave->created_at->diffForHumans(),
-                    'profile_picture' => $profilePicture,
+                    'profile_picture' => $profile->profile_picture,
                 ];
             });
 
-        $inactiveUsers = User::whereDoesntHave('leaves', function ($query) {
-            $query->whereDate('start_day', '<=', today())
-                ->whereDate('end_day', '>=', today());
-        })->with(['profile:id,user_id,first_name,last_name,profile_picture'])
+        // Get inactive users
+        $inactiveUsers = User::whereHas('leaves', function ($query) use ($today) {
+            $query->whereDate('start_day', '<=', $today)
+                ->whereDate('end_day', '>=', $today);
+        })
+            ->with('profile:id,user_id,first_name,last_name,profile_picture')
             ->get()
             ->map(function ($user) {
+                $profile = optional($user->profile);
                 return [
-                    'first_name' => $user->profile->first_name ?? null,
-                    'last_name' => $user->profile->last_name ?? null,
-                    'profile_picture' => $user->profile->profile_picture ?? null,
+                    'first_name' => $profile->first_name,
+                    'last_name' => $profile->last_name,
+                    'profile_picture' => $profile->profile_picture,
                 ];
             });
 
-        $activeToday = User::count() - $inactiveUsers->count();
+        // Active users count
+        $totalUsers = User::count();
+        $activeToday = $totalUsers - $inactiveUsers->count();
 
+        // Quick Overview Data
         $quickOverview = [
-            'totalUsers' => User::count(),
+            'totalUsers' => $totalUsers,
             'activeToday' => $activeToday,
-            'leavesApproved' => Leave::where('status_of_leave', 'approved')->whereMonth('created_at', now()->month)->count(),
+            'leavesApproved' => Leave::where('status_of_leave', 'approved')
+                ->whereMonth('created_at', now()->month)
+                ->count(),
             'pendingLeaves' => Leave::where('status_of_leave', 'pending')->count(),
             'inactiveUsers' => $inactiveUsers
         ];
 
-        $today = now();
-
-        $upcomingEvents = Leave::with('user.profile')
+        // Upcoming Events (Leaves)
+        $upcomingEvents = Leave::with(['user.profile:id,user_id,first_name,last_name,profile_picture'])
             ->whereDate('start_day', '>', $today)
-            ->whereDate('start_day', '<=', $today->copy()->addWeek())
+            ->whereDate('start_day', '<=', $oneWeekFromNow)
             ->get()
             ->map(function ($leave) use ($today) {
-                $profile = $leave->user->profile;
-                $firstName = $profile->first_name ?? 'N/A';
-                $lastName = $profile->last_name ?? 'N/A';
-                $profilePicture = $profile->profile_picture ?? null;
-
-                $startDate = $leave->start_day;
-                $eventDate = $startDate->isSameDay($today->copy()->addDay()) ? 'Tomorrow' : $startDate->format('l, F j');
+                $profile = optional($leave->user->profile);
+                $eventDate = $leave->start_day->isSameDay($today->copy()->addDay())
+                    ? 'Tomorrow'
+                    : $leave->start_day->format('l, F j');
 
                 return [
-                    'name' => $firstName . ' ' . $lastName,
-                    'profile_picture' => $profilePicture,
-                    'event' => $leave->type_of_leave . ' Leave',
+                    'name' => "{$profile->first_name} {$profile->last_name}",
+                    'profile_picture' => $profile->profile_picture,
+                    'event' => "{$leave->type_of_leave} Leave",
                     'date' => $eventDate,
                 ];
             });

@@ -21,7 +21,7 @@ defineProps({
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8 space-y-8">
                 <!-- Quick Overview Section -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div class="bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg rounded-lg p-6 text-white">
                         <h3 class="text-lg font-semibold">Total Users</h3>
                         <p class="text-3xl font-bold mt-4">{{ quickOverview.totalUsers }}</p>
@@ -43,37 +43,10 @@ defineProps({
                     </div>
                 </div>
 
-                <!-- Recent Activities Section -->
-                <div class="bg-white shadow-lg rounded-lg p-6">
-                    <h3 class="text-xl font-semibold text-gray-800">Recent Activities</h3>
-                    <ul class="mt-4 space-y-3">
-                        <li v-for="activity in recentActivities" :key="activity.id" class="flex items-start gap-4">
-                            <!-- Profile Picture -->
-                            <div
-                                class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                                <img
-                                    v-if="activity.profile_picture"
-                                    :src="activity.profile_picture"
-                                    alt="Profile Picture"
-                                    class="w-full h-full object-cover"
-                                />
-                                <i v-else class="fas fa-user text-gray-400"></i>
-                            </div>
-                            <!-- Activity Details -->
-                            <div>
-                                <p class="text-gray-700 font-medium">
-                                    {{ activity.activity }}
-                                </p>
-                                <p class="text-sm text-gray-500">{{ activity.time }}</p>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-
                 <!-- Inactive Users Section -->
                 <div class="bg-white shadow-lg rounded-lg p-6">
                     <h3 class="text-xl font-semibold text-gray-800">
-                        <i class="fas fa-user-slash text-red-500 mr-2"></i> Inactive Users Today
+                        <i class="fas fa-user-slash text-red-500 mr-2"></i> Who's Off Today?
                     </h3>
                     <ul class="divide-y divide-gray-200 mt-4">
                         <li
@@ -102,6 +75,33 @@ defineProps({
                     <div v-if="!quickOverview.inactiveUsers.length" class="text-gray-500 text-center mt-4">
                         <i class="fas fa-info-circle mr-1"></i> All users are active today.
                     </div>
+                </div>
+
+                <!-- Recent Activities Section -->
+                <div class="bg-white shadow-lg rounded-lg p-6">
+                    <h3 class="text-xl font-semibold text-gray-800">Recent Activities</h3>
+                    <ul class="mt-4 space-y-3">
+                        <li v-for="activity in recentActivities" :key="activity.id" class="flex items-start gap-4">
+                            <!-- Profile Picture -->
+                            <div
+                                class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                                <img
+                                    v-if="activity.profile_picture"
+                                    :src="activity.profile_picture"
+                                    alt="Profile Picture"
+                                    class="w-full h-full object-cover"
+                                />
+                                <i v-else class="fas fa-user text-gray-400"></i>
+                            </div>
+                            <!-- Activity Details -->
+                            <div>
+                                <p class="text-gray-700 font-medium">
+                                    {{ activity.activity }}
+                                </p>
+                                <p class="text-sm text-gray-500">{{ activity.time }}</p>
+                            </div>
+                        </li>
+                    </ul>
                 </div>
 
                 <!-- Upcoming Leave Events -->

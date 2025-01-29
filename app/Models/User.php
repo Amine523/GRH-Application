@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticated;
@@ -61,5 +62,13 @@ class User extends Authenticated
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+
+    protected function fullName(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->profile ? "{$this->profile->first_name} {$this->profile->last_name}" : null,
+        );
     }
 }

@@ -8,6 +8,7 @@ use App\Models\Leave;
 use App\Models\Team;
 use App\Models\User;
 use App\Repositories\LeaveRepository;
+use App\Services\LeaveNotificationService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Mail;
@@ -56,43 +57,36 @@ class LeaveController extends Controller
         $transformedEndDay = $leaveRequest->end_day
             ? Carbon::parse($leaveRequest->end_day)->addDay()
             : $transformedStartDay;
-        $transformedstartTime = Carbon::parse($leaveRequest->start_time)->addHour(1)->format('H:i');
-        $numberOfDays = $this->leaveRepository->getWeekdaysBetween($transformedStartDay, $transformedEndDay);
-        $user = User::find($leaveRequest->user_id);
+        $transformedStartTime = Carbon::parse($leaveRequest->start_time)->addHour(1)->format('H:i');
+
+        $user = User::with('team')->find($leaveRequest->user_id);
+        $teamName = strtolower(trim($user->team->team_name ?? ''));
         $validBalance = $user->valid_balance;
 
-        $leave = $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay, $transformedstartTime);
+        $numberOfDays = $this->leaveRepository->getWeekdaysBetween($transformedStartDay, $transformedEndDay);
 
-        Mail::to(['grh@softtodo.com', 'fatma.abid@softtodo.com'])
-            ->send(new LeaveRequestMail(
-                $user->profile->first_name . ' ' . $user->profile->last_name,
-                'request',
-                leaveDuration: $numberOfDays,
-                leave: $leave
-            ));
-
-        switch ($leaveRequest->type_of_leave) {
-            case 'vacation':
-                if (strtolower(trim($user->team->team_name)) !== 'softtodo') {
-                    $leaveService->approve($leave->id);
-                    return to_route('leave.index')->with('success', 'Vacation request submitted and approved successfully.');
-                }
-                return to_route('leave.index')->with('success', 'Vacation request submitted successfully.');
-
-            case 'authorisation':
-                if (strtolower(trim($user->team->team_name)) !== 'softtodo') {
-                    $leaveService->approve($leave->id);
-                    return to_route('leave.index')->with('success', 'Authorization request submitted and approved successfully.');
-                }
-                return to_route('leave.index')->with('success', 'Authorization request submitted successfully.');
-
-            default:
-                if (strtolower(trim($user->team->team_name)) !== 'softtodo' && $validBalance >= $numberOfDays) {
-                    $leaveService->approve($leave->id);
-                    return to_route('leave.index')->with('success', 'Leave request submitted and approved successfully.');
-                }
-                return back()->with('error', 'Not enough leave balance. Leave submitted but requires further review.');
+        if ($validBalance < $numberOfDays && !in_array($leaveRequest->type_of_leave, ['vacation', 'authorisation'])) {
+            return back()->with('error', 'Not enough leave balance. Leave submitted but requires further review.');
         }
+
+        $leave = $this->leaveRepository->createLeave(
+            $leaveRequest,
+            $transformedStartDay,
+            $transformedEndDay,
+            $transformedStartTime
+        );
+
+        LeaveNotificationService::sendLeaveNotifications($user, $leave);
+
+        $shouldApprove = ($teamName !== 'softtodo');
+
+        $message = ucfirst($leaveRequest->type_of_leave) . " request submitted successfully.";
+        if ($shouldApprove) {
+            $leaveService->approve($leave->id);
+            $message = ucfirst($leaveRequest->type_of_leave) . " request submitted and approved successfully.";
+        }
+
+        return to_route('leave.index')->with('success', $message);
     }
 
     /**
