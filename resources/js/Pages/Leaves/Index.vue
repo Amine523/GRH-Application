@@ -62,6 +62,7 @@ export default {
             start_day: null,
             start_time: null,
             end_day: null,
+            halfday_session: 'morning',
             authorisationHours: 0,
             team_user: null,
             users: [],
@@ -175,20 +176,18 @@ export default {
             }));
         },
         onEventRender(args) {
-            if (args.data.Status === 'pending') {
-                args.element.style.backgroundColor = 'orange';
-            } else if (args.data.Status === 'approved') {
+            if (args.data.Status === 'approved') {
                 if (args.data.Type === 'authorisation') {
                     args.element.style.backgroundColor = '#205fa9';
+                } else if (args.data.Type === 'halfday') {
+                    args.element.style.backgroundColor = '#8A2BE2';
                 } else if (args.data.Type === 'sick') {
                     args.element.style.backgroundColor = '#203b48';
                 } else {
                     args.element.style.backgroundColor = 'green';
                 }
-            } else if (args.data.Status === 'rejected') {
-                args.element.style.backgroundColor = 'red';
-            } else if (args.data.Status === 'revoked') {
-                args.element.style.backgroundColor = 'gray';
+            } else if (args.data.Status === 'pending') {
+                args.element.style.backgroundColor = 'orange';
             }
         },
         getNestedValue(item, field) {
@@ -216,11 +215,17 @@ export default {
                 this.end_day = this.start_day;
             }
         },
+        getStartTime() {
+            if (this.type_of_leave === 'halfday') {
+                return this.halfday_session === 'morning' ? '07:00' : '12:00';
+            }
+            return this.start_time;
+        },
         submitLeaveRequest() {
             const leaveData = {
                 type_of_leave: this.type_of_leave,
                 start_day: this.start_day,
-                start_time: this.start_time,
+                start_time: this.getStartTime(),
                 end_day: this.end_day,
                 authorisationHours: this.type_of_leave === 'authorisation' ? String(this.authorisationHours) : null,
                 user_id: this.team_user ? this.team_user : this.$attrs.auth.user.id,
@@ -232,13 +237,11 @@ export default {
                     this.refreshLeaves();
                     this.setEventDataSource();
                 },
-            })
+            });
         },
         setEventDataSource() {
             this.eventSettings.dataSource = this.leaves
-                .filter(leave =>
-                    !['revoked', 'rejected'].includes(leave.status_of_leave.toLowerCase())
-                )
+                .filter(leave => leave.status_of_leave.toLowerCase() === 'approved')
                 .flatMap(leave => {
                     const user = this.users.find(user => user.id === leave.user_id);
                     const userName = user ? user.profile.first_name.toUpperCase() + ' ' + user.profile.last_name : 'Unknown User';
@@ -250,10 +253,18 @@ export default {
                     let currentStart = startDate.clone();
 
                     if (leave.type_of_leave === 'authorisation' && leave.start_time) {
-                        subject = leave.start_time + ' (' + String(leave.authorization_hour) + 'hour(s)): ' + userName;
+                        const authorizationHour = parseFloat(leave.authorization_hour) || 0;
+                        const hoursFormatted = Number.isInteger(authorizationHour)
+                            ? `${authorizationHour}h`
+                            : `${authorizationHour.toFixed(1)}h`;
+                        subject = `${userName} - ${leave.start_time} | (${hoursFormatted})`;
+                    } else if (leave.type_of_leave === 'halfday' && leave.start_time) {
+                        const period = leave.start_time === '08:00' ? 'Morning' : 'Afternoon';
+                        subject = `${userName} - ${period}`;
                     } else {
                         subject = userName;
                     }
+
                     while (currentStart.isSameOrBefore(endDate)) {
                         const currentWeekEnd = moment.min(
                             currentStart.clone().day(5),
@@ -263,7 +274,7 @@ export default {
                         if (currentStart.day() !== 0 && currentStart.day() !== 6) {
                             events.push({
                                 Id: leave.id,
-                                Subject: `${subject}`,
+                                Subject: subject,
                                 StartTime: currentStart.format('MM/DD/YYYY'),
                                 EndTime: currentWeekEnd.clone().add(1, 'day').format('MM/DD/YYYY'),
                                 Status: leave.status_of_leave,
@@ -273,7 +284,7 @@ export default {
                             });
                         }
 
-                        currentStart = currentWeekEnd.clone().add(3, 'days'); // Advance to next week
+                        currentStart = currentWeekEnd.clone().add(3, 'days');
                     }
 
                     return events;
@@ -296,6 +307,9 @@ export default {
                             </div>
                             <div class="manuel-item flex gap-2 items-center"><span
                                 class="is-square is-darkBlue-square"></span> Sick Leave
+                            </div>
+                            <div class="manuel-item flex gap-2 items-center"><span
+                                class="is-square is-violet-square"></span> Halfday
                             </div>
                             <div class="manuel-item flex gap-2 items-center"><span
                                 class="is-square is-blue-square"></span> Autorisation
@@ -452,7 +466,18 @@ export default {
                         <ejs-datepicker v-model="start_day" :firstDayOfWeek='1'
                                         :renderDayCell="disableWeekends"></ejs-datepicker>
                     </div>
-
+                    <div v-if="type_of_leave === 'halfday'" class="mt-3">
+                        <label>Session:</label>
+                        <ejs-dropdownlist
+                            :dataSource="[
+                                { text: 'Morning (08:00 - 12:00)', value: 'morning' },
+                                { text: 'Afternoon (13:00 - 17:00)', value: 'afternoon' }
+                            ]"
+                            v-model="halfday_session"
+                            :fields="{ text: 'text', value: 'value' }"
+                            placeholder="Select Session"
+                        ></ejs-dropdownlist>
+                    </div>
                     <div v-if="type_of_leave === 'authorisation'">
                         <label>Time:</label>
                         <ejs-timepicker :min="minTime" :max="maxTime" :value="minTime"

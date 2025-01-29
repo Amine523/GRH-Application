@@ -18,6 +18,7 @@ class LeaveRepository
      */
     public function createLeave($data, $startDay, $endDate, $startTime): Leave
     {
+
         return Leave::create([
             'user_id' => $data->user_id,
             'type_of_leave' => $data->type_of_leave,

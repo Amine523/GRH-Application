@@ -10,6 +10,6 @@ class LeaveNotificationService
     public static function sendLeaveNotifications($user, $leave): void
     {
         Mail::to($user->email)->send(new LeaveRequestMail($user->fullName, 'user-approved', $leave));
-        Mail::to('hr@company.com')->send(new LeaveRequestMail($user->fullName, 'hr-notification', $leave));
+        Mail::to(['grh@softtodo.com', 'fatma.abid@softtodo.com'])->send(new LeaveRequestMail($user->fullName, 'hr-notification', $leave));
     }
 }

@@ -23,6 +23,10 @@ span.is-blue-square {
     background-color: #205fa9;
 }
 
+span.is-violet-square {
+    background-color: #8A2BE2;
+}
+
 span.is-orange-square {
     background-color: orange;
 }
