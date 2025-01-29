@@ -7,29 +7,38 @@
             margin: 0;
             padding: 0;
             font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
         }
 
         table {
             width: 100%;
             height: 100%;
-            background-color: #f4f4f4;
         }
 
         .email-container {
             max-width: 600px;
-            margin: 0 auto;
+            margin: 20px auto;
             background-color: #ffffff;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
         .email-content {
-            text-align: center;
+            text-align: left;
+            color: #333;
         }
 
         .logo {
-            margin-bottom: 20px;
+            display: block;
+            margin: 0 auto 20px;
+        }
+
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #777;
+            text-align: center;
         }
     </style>
 </head>
@@ -42,16 +51,29 @@
                     <td class="email-content">
                         <img src="https://gestion-conge.soft2do.de/images/logo-softtodo.png" alt="Company Logo"
                              class="logo" width="150">
-                        <h4>Bonjour {{ $firstName }},</h4>
-                        <p>Nous avons reçu votre nouvelle demande de congé.</p>
-                        @if(!empty($leaveDuration))
-                            <p>Durée du congé: {{ $leaveDuration }} jours.</p>
-                        @else
-                            <p>Durée du congé: Non spécifiée.</p>
-                        @endif
-                        <p>Nous allons traiter votre demande et revenir vers vous sous peu.</p>
+                        <h3>Nouvelle demande de congé</h3>
+                        <p>Bonjour,</p>
+                        <p>Une nouvelle demande de congé a été soumise par <strong>{{ $firstName }}</strong>.</p>
+
+                        <p><strong>Durée :</strong>
+                            @if(!empty($leaveDuration))
+                                {{ $leaveDuration }} jour(s)
+                            @else
+                                Non spécifiée
+                            @endif
+                        </p>
+
+                        <p><strong>Date de début
+                                :</strong> {{ \Carbon\Carbon::parse($leave->start_date)->format('Y-m-d') }}</p>
+                        <p><strong>Date de fin :</strong> {{ \Carbon\Carbon::parse($leave->end_date)->format('Y-m-d') }}
+                        </p>
+
+                        <p>Merci de prendre en compte cette demande.</p>
+
                         <p>Cordialement,</p>
-                        <p>L'équipe Softtodo</p>
+                        <p><strong>L'équipe GRH</strong></p>
+
+                        <p class="footer">Cet e-mail est généré automatiquement. Veuillez ne pas y répondre.</p>
                     </td>
                 </tr>
             </table>

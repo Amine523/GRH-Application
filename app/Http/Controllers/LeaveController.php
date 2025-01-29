@@ -58,17 +58,17 @@ class LeaveController extends Controller
             : $transformedStartDay;
         $transformedstartTime = Carbon::parse($leaveRequest->start_time)->addHour(1)->format('H:i');
         $numberOfDays = $this->leaveRepository->getWeekdaysBetween($transformedStartDay, $transformedEndDay);
-        $user = auth()->user();
+        $user = User::find($leaveRequest->user_id);
         $validBalance = $user->valid_balance;
 
         $leave = $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay, $transformedstartTime);
 
         Mail::to(['grh@softtodo.com', 'fatma.abid@softtodo.com'])
             ->send(new LeaveRequestMail(
-                $user->first_name,
+                $user->profile->first_name . ' ' . $user->profile->last_name,
                 'request',
-                $leaveRequest->leave_reason,
-                $numberOfDays
+                leaveDuration: $numberOfDays,
+                leave: $leave
             ));
 
         switch ($leaveRequest->type_of_leave) {

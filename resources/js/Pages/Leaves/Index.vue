@@ -373,13 +373,13 @@ export default {
                                         >
                                             Reject
                                         </PrimaryButton>
+                                        <PrimaryButton
+                                            @click="deleteLeave(slotProps.data.id)"
+                                            class="bg-gray-600 text-white mr-2"
+                                        >
+                                            Remove
+                                        </PrimaryButton>
                                     </template>
-                                    <PrimaryButton
-                                        @click="deleteLeave(slotProps.data.id)"
-                                        class="bg-gray-600 text-white mr-2"
-                                    >
-                                        Remove
-                                    </PrimaryButton>
                                 </template>
                             </Column>
                         </DataTable>
