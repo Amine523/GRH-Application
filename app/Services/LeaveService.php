@@ -68,8 +68,6 @@ class LeaveService
         $leave->status_of_leave = 'approved';
         $user->save();
         $leave->save();
-
-        Mail::to($user->email)->send(new LeaveRequestMail($user->profile->first_name, 'approved-authorisation'));
     }
 
     /**

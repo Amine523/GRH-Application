@@ -92,18 +92,33 @@
                         @if(isset($leave))
                             <h4>Détails du congé :</h4>
                             <table class="details-table">
-                                <tr>
-                                    <th>Début</th>
-                                    <td>{{ \Carbon\Carbon::parse($leave?->start_date)->translatedFormat('d F Y') }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Fin</th>
-                                    <td>{{ \Carbon\Carbon::parse($leave?->end_date)->translatedFormat('d F Y') }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Motif</th>
-                                    <td>{{ ucfirst($leave?->type_of_leave) ?? 'Non spécifié' }}</td>
-                                </tr>
+                                @if(in_array($leave->type_of_leave, ['vacation', 'sick']))
+                                    <tr>
+                                        <th>Début</th>
+                                        <td>{{ $leave->start_day->translatedFormat('d F Y') }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Fin</th>
+                                        <td>{{ $leave->end_day->translatedFormat('d F Y') }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Motif</th>
+                                        <td>{{ ucfirst($leave->type_of_leave ?? 'Non spécifié') }}</td>
+                                    </tr>
+                                @elseif(in_array($leave->type_of_leave, ['authorisation', 'halfday']))
+                                    <tr>
+                                        <th>Heure de début</th>
+                                        <td>{{ $leave->start_time}}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Durée</th>
+                                        <td>{{ $leave->authorization_hour }} heures</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Motif</th>
+                                        <td>{{ ucfirst($leave->type_of_leave ?? 'Non spécifié') }}</td>
+                                    </tr>
+                                @endif
                             </table>
                         @endif
 
