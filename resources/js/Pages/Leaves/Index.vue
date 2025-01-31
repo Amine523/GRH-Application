@@ -272,7 +272,7 @@ export default {
             }
         },
         submitLeaveRequest() {
-            if (value === 'halfday' || value === 'authorisation') {
+            if (this.leaveForm.type_of_leave === 'halfday' || this.leaveForm.type_of_leave === 'authorisation') {
                 this.leaveForm.end_day = this.leaveForm.start_day;
             }
 
