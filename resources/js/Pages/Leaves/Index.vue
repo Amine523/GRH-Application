@@ -1,21 +1,24 @@
 <script>
-import {ref} from 'vue';
-import {DatePickerComponent} from '@syncfusion/ej2-vue-calendars';
-import {TimePickerComponent} from '@syncfusion/ej2-vue-calendars';
+import {DatePickerComponent, TimePickerComponent} from '@syncfusion/ej2-vue-calendars';
 import {RadioButtonComponent} from '@syncfusion/ej2-vue-buttons';
 import {SliderComponent} from '@syncfusion/ej2-vue-inputs';
-import {DialogComponent} from '@syncfusion/ej2-vue-popups';
 import {ScheduleComponent, Day, Month, Agenda} from '@syncfusion/ej2-vue-schedule';
 import {DropDownListComponent} from '@syncfusion/ej2-vue-dropdowns';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import {Head, router} from '@inertiajs/vue3';
+import {Head, router, useForm, usePage} from '@inertiajs/vue3';
+import Dialog from 'primevue/dialog';
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import InputText from 'primevue/inputtext';
 import Tag from 'primevue/tag';
-import {useToast} from "vue-toastification";
 import moment from "moment";
+import RadioButton from 'primevue/radiobutton';
+import Fieldset from 'primevue/fieldset';
+import AutoComplete from 'primevue/autocomplete';
+import Select from 'primevue/select';
+import DatePicker from 'primevue/datepicker';
+import Slider from 'primevue/slider';
 
 export default {
     name: "Index",
@@ -26,21 +29,59 @@ export default {
         'ejs-timepicker': TimePickerComponent,
         'ejs-radiobutton': RadioButtonComponent,
         'ejs-slider': SliderComponent,
-        'ejs-dialog': DialogComponent,
         'ejs-dropdownlist': DropDownListComponent,
         Head,
         AuthenticatedLayout,
         DataTable,
         Column,
         InputText,
-        Tag
+        Tag,
+        Dialog,
+        RadioButton,
+        Fieldset,
+        AutoComplete,
+        Select,
+        DatePicker,
+        Slider
     },
     provide: {
         schedule: [Day, Month, Agenda]
     },
-
     data() {
         return {
+            page: usePage(),
+            selectedLeaves: [],
+            leaveTypes: [
+                {label: "Vacation", value: "vacation"},
+                {label: "Sick", value: "sick"},
+                {label: "Authorisation", value: "authorisation"},
+                {label: "Half Day", value: "halfday"}
+            ],
+            sessionOptions: [
+                {label: 'Morning (08:00 - 12:00)', value: 'morning'},
+                {label: 'Afternoon (13:00 - 17:00)', value: 'afternoon'}
+            ],
+            timeOptions: [
+                {label: "08:00", value: "08:00"},
+                {label: "08:30", value: "08:30"},
+                {label: "09:00", value: "09:00"},
+                {label: "09:30", value: "09:30"},
+                {label: "10:00", value: "10:00"},
+                {label: "10:30", value: "10:30"},
+                {label: "11:00", value: "11:00"},
+                {label: "11:30", value: "11:30"},
+                {label: "12:00", value: "12:00"},
+                {label: "12:30", value: "12:30"},
+                {label: "13:00", value: "13:00"},
+                {label: "13:30", value: "13:30"},
+                {label: "14:00", value: "14:00"},
+                {label: "14:30", value: "14:30"},
+                {label: "15:00", value: "15:00"},
+                {label: "15:30", value: "15:30"},
+                {label: "16:00", value: "16:00"},
+                {label: "16:30", value: "16:30"}
+            ],
+            // Schedule settings
             eventSettings: {
                 dataSource: [],
                 allowAdding: false
@@ -48,31 +89,41 @@ export default {
             workDays: [1, 2, 3, 4, 5],
             views: ['Month', 'Day', 'Agenda'],
             selectedDate: new Date(),
-            isAdmin: false,
-            isProjectManager: false,
-            showDialog: false,
-            showRefuseDialog: false,
-            refuseReason: null,
-            refusedLeave: null,
-            showRevokeDialog: false,
-            revokedLeave: null,
-            revokeReason: null,
-            type_of_leave: '',
-            authorisation_hour: '',
-            start_day: null,
-            start_time: null,
-            end_day: null,
-            halfday_session: 'morning',
-            authorisationHours: 0,
-            team_user: null,
+
+            // Dialog visibility states
+            activeDialog: null,  // 'refuse', etc.
+
+            // User and team data
             users: [],
             mappedUsers: [],
             selectedProducts: [],
-            minTime: new Date('1970-01-01T08:00:00'),
-            maxTime: new Date('1970-01-01T16:00:00'),
+            localLeaves: [],
+
+            // Table filters
             filters: {
-                global: {value: ''}
+                global: {value: '', matchMode: 'contains'}
             },
+
+            // Leave form data using Inertia's useForm()
+            leaveForm: useForm({
+                type_of_leave: '',
+                authorisation_hour: '',
+                start_day: null,
+                start_time: new Date('1970-01-01T08:00:00'),
+                end_day: null,
+                halfday_session: 'morning',
+                authorisationHours: 0,
+                team_user: null,
+                user_id: null
+            }),
+
+            // Leave action variables
+            refusedLeave: null,
+            refuseReason: null,
+
+            // Dialog visibility states (will be removed later)
+            showDialog: false,
+            showRefuseDialog: false,
         };
     },
     props: {
@@ -80,13 +131,49 @@ export default {
         user: Object,
     },
     computed: {
+        approvedLeaves() {
+            return this.localLeaves
+                .filter(leave => leave.status_of_leave.toLowerCase() === 'approved')
+                .map(leave => {
+                    this.users = this.$attrs.users;
+                    this.mappedUsers = this.mapToOptions(this.users, ['profile.first_name', 'profile.last_name'], 'id');
+
+                    const user = this.users.find(u => u.id === leave.user_id);
+
+                    const userName = user ? `${user.profile.first_name.toUpperCase()} ${user.profile.last_name}` : 'Unknown User';
+                    const startDate = moment(leave.start_day, 'DD/MM/YYYY');
+                    const endDate = moment(leave.end_day, 'DD/MM/YYYY');
+
+                    let subject = userName;
+                    if (leave.type_of_leave === 'authorisation' && leave.start_time) {
+                        const hoursFormatted = Number.isInteger(leave.authorization_hour)
+                            ? `${leave.authorization_hour}h`
+                            : `${parseFloat(leave.authorization_hour).toFixed(1)}h`;
+                        subject += ` - ${leave.start_time} | (${hoursFormatted})`;
+                    } else if (leave.type_of_leave === 'halfday') {
+                        subject += ` - ${leave.start_time === '08:00' ? 'Morning' : 'Afternoon'}`;
+                    }
+
+                    return {
+                        Id: leave.id,
+                        Subject: subject,
+                        StartTime: startDate.format('YYYY-MM-DD'),
+                        EndTime: endDate.format('YYYY-MM-DD'),
+                        Status: leave.status_of_leave,
+                        Type: leave.type_of_leave,
+                        FirstName: user?.profile?.first_name ?? '',
+                        LastName: user?.profile?.last_name ?? '',
+                    };
+                });
+        },
         mappedLeaves() {
             return this.leaves.map(leave => {
-                const user = this.users.find(user => user.id === leave.user_id);
+                const user = this.users.find(user => user.id === leave.user_id) || {profile: {}};
+
                 return {
                     id: leave.id,
-                    first_name: user ? user.profile.first_name : 'Unknown',
-                    last_name: user ? user.profile.last_name : 'User',
+                    first_name: user.profile.first_name || 'Unknown',
+                    last_name: user.profile.last_name || 'User',
                     start_day: leave.start_day,
                     start_time: leave.start_time,
                     end_day: leave.end_day,
@@ -95,76 +182,48 @@ export default {
                     authorization_hour: leave.authorization_hour,
                 };
             });
+        },
+        isAdmin() {
+            return this.page.props.auth.user_roles.includes('admin');
+        },
+        isProjectManager() {
+            return this.page.props.auth.user_roles.includes('project_manager');
         }
     },
     created() {
-        if (this.$attrs.auth.user_roles[0].includes('admin')) {
-            this.isAdmin = true;
-        }
-        if (this.$attrs.auth.user_roles[0].includes('project_manager')) {
-            this.isProjectManager = true;
-        }
+        this.localLeaves = [...this.leaves];
         this.users = this.$attrs.users;
         this.mappedUsers = this.mapToOptions(this.users, ['profile.first_name', 'profile.last_name'], 'id');
-        this.setEventDataSource();
     },
     methods: {
-        disableWeekends(args) {
-            const day = args.date.getDay();
-            if (day === 0 || day === 6) {
-                args.isDisabled = true;
-            }
-        },
         approveLeave(leaveId) {
-            const leaveData = {
-                id: leaveId,
-            };
-            const toast = useToast();
-            router.post(route('leave.approve'), leaveData, {
+            router.post(route('leave.approve'), {id: leaveId}, {
                 preserveScroll: true,
-                onSuccess: () => {
-                    this.refreshLeaves();
-                },
-            })
-        },
-        deleteLeave(leaveId) {
-            const leaveData = {
-                id: leaveId,
-            };
-            router.post(route('leave.delete'), leaveData, {
-                preserveScroll: true,
-                onSuccess: () => {
-                    this.refreshLeaves();
-                },
-            })
-        },
-        refuseLeave() {
-            const leaveData = {
-                id: this.refusedLeave,
-                leaveReason: this.refuseReason,
-            };
-            router.post(route('leave.refuse'), leaveData).then(response => {
-                this.refreshLeaves();
-            }).catch(error => {
-                console.error('Error refusing leave:', error);
+                onSuccess: this.refreshLeaves
             });
         },
-        revokeLeave() {
-            const leaveData = {
-                id: this.revokedLeave,
-                revokeReason: this.revokeReason,
-            };
-            router.post(route('leave.revoke'), leaveData, {
+        deleteLeave(leaveId) {
+            router.post(route('leave.delete'), {id: leaveId}, {
                 preserveScroll: true,
                 onSuccess: () => {
-                    this.closeDialog();
-                    this.refreshLeaves();
-                },
+                    this.localLeaves = this.localLeaves.filter(leave => leave.id !== leaveId);
+                }
+            });
+        },
+        refuseLeave() {
+            this.leaveForm.post(route('leave.refuse'), {
+                preserveScroll: true,
+                onSuccess: this.refreshLeaves
             });
         },
         refreshLeaves() {
-            router.get(route('leave.index')).then(response => {
-                this.leaves = response.data.leaves;
+            router.visit(route("leave.index"), {
+                only: ["leaves"],
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: (response) => {
+                    this.localLeaves = response.props.leaves;
+                }
             });
         },
         mapToOptions(items, labelFields, valueField = 'id') {
@@ -200,97 +259,85 @@ export default {
             this.refusedLeave = id;
             this.showRefuseDialog = true;
         },
-        openRevokeDialog(id) {
-            this.revokedLeave = id;
-            this.showRevokeDialog = true;
-        },
         closeDialog() {
             this.showDialog = false;
             this.showRefuseDialog = false;
-            this.showRevokeDialog = false;
-        },
-        handletype_of_leaveChange(value) {
-            this.type_of_leave = value;
-            if (value === 'halfday' || value === 'authorisation') {
-                this.end_day = this.start_day;
-            }
         },
         getStartTime() {
-            if (this.type_of_leave === 'halfday') {
-                return this.halfday_session === 'morning' ? '07:00' : '12:00';
+            switch (this.leaveForm.type_of_leave) {
+                case 'halfday':
+                    return this.leaveForm.halfday_session === 'morning' ? '07:00' : '12:00';
+                default:
+                    return this.leaveForm.start_time;
             }
-            return this.start_time;
         },
         submitLeaveRequest() {
-            const leaveData = {
-                type_of_leave: this.type_of_leave,
-                start_day: this.start_day,
-                start_time: this.getStartTime(),
-                end_day: this.end_day,
-                authorisationHours: this.type_of_leave === 'authorisation' ? String(this.authorisationHours) : null,
-                user_id: this.team_user ? this.team_user : this.$attrs.auth.user.id,
-            };
-            router.post(route('leave.store'), leaveData, {
+            if (value === 'halfday' || value === 'authorisation') {
+                this.leaveForm.end_day = this.leaveForm.start_day;
+            }
+
+            this.leaveForm.user_id = this.leaveForm.team_user
+                ? this.leaveForm.team_user
+                : this.page.props.auth.user.id;
+
+            this.leaveForm.start_time = this.getStartTime();
+            this.leaveForm.authorisationHours = this.leaveForm.type_of_leave === 'authorisation'
+                ? Number(this.leaveForm.authorisationHours) || 0
+                : null;
+
+            router.visit(route('leave.store'), {
+                method: 'POST',
+                only: ["leaves"],
+                data: this.leaveForm.data(),
                 preserveScroll: true,
+                preserveState: true,
                 onSuccess: () => {
                     this.closeDialog();
-                    this.refreshLeaves();
-                    this.setEventDataSource();
+                    this.localLeaves = this.leaves;
                 },
             });
         },
         setEventDataSource() {
-            this.eventSettings.dataSource = this.leaves
+            this.eventSettings.dataSource = this.localLeaves
                 .filter(leave => leave.status_of_leave.toLowerCase() === 'approved')
-                .flatMap(leave => {
-                    const user = this.users.find(user => user.id === leave.user_id);
-                    const userName = user ? user.profile.first_name.toUpperCase() + ' ' + user.profile.last_name : 'Unknown User';
-                    let subject = '';
+                .map(leave => {
+                    const user = this.users.find(u => u.id === leave.user_id);
+                    const userName = user ? `${user.profile.first_name.toUpperCase()} ${user.profile.last_name}` : 'Unknown User';
                     const startDate = moment(leave.start_day, 'DD/MM/YYYY');
                     const endDate = moment(leave.end_day, 'DD/MM/YYYY');
 
-                    const events = [];
-                    let currentStart = startDate.clone();
-
+                    let subject = userName;
                     if (leave.type_of_leave === 'authorisation' && leave.start_time) {
-                        const authorizationHour = parseFloat(leave.authorization_hour) || 0;
-                        const hoursFormatted = Number.isInteger(authorizationHour)
-                            ? `${authorizationHour}h`
-                            : `${authorizationHour.toFixed(1)}h`;
-                        subject = `${userName} - ${leave.start_time} | (${hoursFormatted})`;
-                    } else if (leave.type_of_leave === 'halfday' && leave.start_time) {
-                        const period = leave.start_time === '08:00' ? 'Morning' : 'Afternoon';
-                        subject = `${userName} - ${period}`;
-                    } else {
-                        subject = userName;
+                        const hoursFormatted = Number.isInteger(leave.authorization_hour)
+                            ? `${leave.authorization_hour}h`
+                            : `${parseFloat(leave.authorization_hour).toFixed(1)}h`;
+                        subject += ` - ${leave.start_time} | (${hoursFormatted})`;
+                    } else if (leave.type_of_leave === 'halfday') {
+                        subject += ` - ${leave.start_time === '08:00' ? 'Morning' : 'Afternoon'}`;
                     }
 
-                    while (currentStart.isSameOrBefore(endDate)) {
-                        const currentWeekEnd = moment.min(
-                            currentStart.clone().day(5),
-                            endDate.clone()
-                        );
-
-                        if (currentStart.day() !== 0 && currentStart.day() !== 6) {
-                            events.push({
-                                Id: leave.id,
-                                Subject: subject,
-                                StartTime: currentStart.format('MM/DD/YYYY'),
-                                EndTime: currentWeekEnd.clone().add(1, 'day').format('MM/DD/YYYY'),
-                                Status: leave.status_of_leave,
-                                Type: leave.type_of_leave,
-                                FirstName: user?.profile?.first_name ?? '',
-                                LastName: user?.profile?.last_name ?? '',
-                            });
-                        }
-
-                        currentStart = currentWeekEnd.clone().add(3, 'days');
-                    }
-
-                    return events;
+                    return {
+                        Id: leave.id,
+                        Subject: subject,
+                        StartTime: startDate.format('YYYY-MM-DD'),
+                        EndTime: endDate.format('YYYY-MM-DD'),
+                        Status: leave.status_of_leave,
+                        Type: leave.type_of_leave,
+                        FirstName: user?.profile?.first_name ?? '',
+                        LastName: user?.profile?.last_name ?? '',
+                    };
                 });
         }
-    }
+    },
+    watch: {
+        approvedLeaves: {
+            handler(newLeaves) {
+                this.eventSettings = {...this.eventSettings, dataSource: newLeaves};
+            },
+            deep: true,
+            immediate: true
+        }
+    },
 }
 </script>
 
@@ -301,7 +348,7 @@ export default {
             <div class="mx-auto space-y-6 sm:px-6 lg:px-8">
                 <div class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
                     <div class="flex justify-between py-5 gap-2">
-                        <div class="flex gap-5">
+                        <div class="flex gap-5 overflow-x-auto">
                             <div class="manuel-item flex gap-2 items-center"><span
                                 class="is-square is-green-square"></span> Vacation Leave
                             </div>
@@ -312,7 +359,7 @@ export default {
                                 class="is-square is-violet-square"></span> Halfday
                             </div>
                             <div class="manuel-item flex gap-2 items-center"><span
-                                class="is-square is-blue-square"></span> Autorisation
+                                class="is-square is-blue-square"></span> Authorisation
                             </div>
                             <div class="manuel-item flex gap-2 items-center"><span
                                 class="is-square is-orange-square"></span> Pending Request
@@ -336,12 +383,18 @@ export default {
                 <div class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
                     <div class="mt-6">
                         <h3 class="text-lg font-bold mb-4">Leave Requests</h3>
-                        <DataTable ref="dt" :value="mappedLeaves" dataKey="id" :paginator="true" :rows="10"
-                                   :filters="filters"
-                                   paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                                   :rowsPerPageOptions="[5, 10, 25]"
-                                   currentPageReportTemplate="Showing {first} to {last} of {totalRecords} leaves">
-
+                        <DataTable
+                            ref="dt"
+                            :value="mappedLeaves"
+                            dataKey="id"
+                            :paginator="true"
+                            :rows="10"
+                            v-model:selection="selectedLeaves"
+                            :filters="filters"
+                            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                            :rowsPerPageOptions="[5, 10, 25]"
+                            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} leaves"
+                        >
                             <template #header>
                                 <div class="flex justify-content-end">
             <span class="p-input-icon-left">
@@ -354,44 +407,41 @@ export default {
                                 <h4>No leaves found</h4>
                             </template>
 
-                            <Column selectionMode="multiple" headerStyle="width: 3rem"/>
-                            <Column field="first_name" header="First Name" sortable/>
-                            <Column field="last_name" header="Last Name" sortable/>
-                            <Column field="start_day" header="Start Day" sortable/>
-                            <Column field="end_day" header="End Day" sortable/>
-                            <Column field="type_of_leave" header="Type of Leave" sortable/>
-                            <Column field="status_of_leave" header="Status of Leave" sortable bodyClass="text-center">
+                            <!-- Enable multiple selection -->
+                            <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
+
+                            <Column field="first_name" header="First Name" :sortable="true"/>
+                            <Column field="last_name" header="Last Name" :sortable="true"/>
+                            <Column field="start_day" header="Start Day" :sortable="true"/>
+                            <Column field="end_day" header="End Day" :sortable="true"/>
+                            <Column field="type_of_leave" header="Type of Leave" :sortable="true"/>
+
+                            <Column bodyClass="text-center" field="status_of_leave" header="Status of Leave"
+                                    :sortable="true">
                                 <template #body="slotProps">
                                     <Tag v-if="slotProps.data.status_of_leave === 'approved'" severity="success"
                                          value="Approved"/>
                                     <Tag v-else-if="slotProps.data.status_of_leave === 'pending'" severity="warn"
                                          value="Pending"/>
-                                    <Tag v-else-if="slotProps.data.status_of_leave === 'revoked'" severity="info"
-                                         value="Revoked"/>
                                     <Tag v-else severity="danger" value="Refused"/>
                                 </template>
                             </Column>
+
                             <Column field="action" header="Action" bodyClass="text-center"
                                     v-if="isProjectManager || isAdmin">
                                 <template #body="slotProps">
                                     <template v-if="slotProps.data.status_of_leave === 'pending'">
-                                        <PrimaryButton
-                                            @click="approveLeave(slotProps.data.id)"
-                                            class="bg-blue-600 text-white mr-2"
-                                        >
+                                        <PrimaryButton @click="approveLeave(slotProps.data.id)"
+                                                       class="bg-blue-600 text-white mr-2">
                                             Approve
                                         </PrimaryButton>
-                                        <PrimaryButton
-                                            @click="openRefuseDialog(slotProps.data.id)"
-                                            class="bg-red-600 text-white mr-2"
-                                        >
+                                        <PrimaryButton @click="openRefuseDialog(slotProps.data.id)"
+                                                       class="bg-red-600 text-white mr-2">
                                             Reject
                                         </PrimaryButton>
                                     </template>
-                                    <PrimaryButton
-                                        @click="deleteLeave(slotProps.data.id)"
-                                        class="bg-gray-600 text-white mr-2"
-                                    >
+                                    <PrimaryButton @click="deleteLeave(slotProps.data.id)"
+                                                   class="bg-gray-600 text-white mr-2">
                                         Remove
                                     </PrimaryButton>
                                 </template>
@@ -401,115 +451,129 @@ export default {
                 </div>
             </div>
         </div>
-
-        <ejs-dialog
-            :visible="showDialog"
-            header="Please fill leave information"
-            :showCloseIcon="true"
-            width="420px"
+        <Dialog
+            v-model:visible="showDialog"
+            :closable="true"
+            :modal="true"
+            :dismissable-mask="true"
+            header="Leave Request"
             @close="closeDialog"
+            class="rounded-lg shadow-lg p-5 bg-white w-[95%] sm:w-[80%] md:w-[60%] lg:w-[50%] max-w-3xl mx-auto"
         >
-            <div class="p-4 py-5">
-                <h3 class="mb-5">Select Leave Type</h3>
-                <div class="flex space-x-[10px]">
-                    <ejs-radiobutton
-                        label="Vacation"
-                        name="type_of_leave"
-                        v-on:change="handletype_of_leaveChange('vacation')"
-                        style="margin-bottom: 30px;"
-                        class="custom-radio"
-                    ></ejs-radiobutton>
-                    <ejs-radiobutton
-                        label="Sick"
-                        name="type_of_leave"
-                        v-on:change="handletype_of_leaveChange('sick')"
-                        style="margin: 30px;"
-                    ></ejs-radiobutton>
-                    <ejs-radiobutton
-                        label="Authorisation"
-                        name="type_of_leave"
-                        v-on:change="handletype_of_leaveChange('authorisation')"
-                        style="margin: 30px;"
-                    ></ejs-radiobutton>
-                    <ejs-radiobutton
-                        label="Half Day"
-                        name="type_of_leave"
-                        v-on:change="handletype_of_leaveChange('halfday')"
-                        style="margin: 30px;"
-                    ></ejs-radiobutton>
-                </div>
-
-                <!-- User selection for admin or project manager -->
-                <div v-if="isAdmin || isProjectManager" class="mt-5">
-                    <label>Select User:</label>
-                    <ejs-dropdownlist
-                        :dataSource="mappedUsers"
-                        v-model="team_user"
-                        :fields="{ text: 'label', value: 'value' }"
-                        placeholder="Select a user"
-                    ></ejs-dropdownlist>
-                </div>
-
-                <div class="mt-5 gap-3">
-                    <div v-if="type_of_leave !== 'authorisation' && type_of_leave !== 'halfday'">
-                        <label>Start Date:</label>
-                        <ejs-datepicker format='dd-MM-yyyy' v-model="start_day" :firstDayOfWeek='1'
-                                        :renderDayCell="disableWeekends"></ejs-datepicker>
-
-                        <label>End Date:</label>
-                        <ejs-datepicker format='dd-MM-yyyy' v-model="end_day" :firstDayOfWeek='1'
-                                        :renderDayCell="disableWeekends"></ejs-datepicker>
+            <div class="space-y-4">
+                <section>
+                    <h3 class="text-lg font-medium mb-2">Leave Type</h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        <button
+                            v-for="(type, index) in leaveTypes"
+                            :key="index"
+                            @click="leaveForm.type_of_leave = type.value"
+                            class="w-full text-center py-2 px-3 rounded-lg border hover:bg-gray-100"
+                            :class="{'bg-blue-500 text-white': leaveForm.type_of_leave === type.value}"
+                        >
+                            {{ type.label }}
+                        </button>
                     </div>
+                </section>
 
-                    <div v-if="type_of_leave === 'halfday' || type_of_leave === 'authorisation'">
-                        <label>Date:</label>
-                        <ejs-datepicker v-model="start_day" :firstDayOfWeek='1'
-                                        :renderDayCell="disableWeekends"></ejs-datepicker>
-                    </div>
-                    <div v-if="type_of_leave === 'halfday'" class="mt-3">
-                        <label>Session:</label>
-                        <ejs-dropdownlist
-                            :dataSource="[
-                                { text: 'Morning (08:00 - 12:00)', value: 'morning' },
-                                { text: 'Afternoon (13:00 - 17:00)', value: 'afternoon' }
-                            ]"
-                            v-model="halfday_session"
-                            :fields="{ text: 'text', value: 'value' }"
-                            placeholder="Select Session"
-                        ></ejs-dropdownlist>
-                    </div>
-                    <div v-if="type_of_leave === 'authorisation'">
-                        <label>Time:</label>
-                        <ejs-timepicker :min="minTime" :max="maxTime" :value="minTime"
-                                        v-model="start_time"></ejs-timepicker>
-                    </div>
+                <section v-if="isAdmin || isProjectManager">
+                    <label class="font-medium">Select User:</label>
+                    <Select
+                        v-model="leaveForm.team_user"
+                        :options="mappedUsers"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Choose a user"
+                        class="w-full border rounded-lg p-2"
+                    />
+                </section>
 
-                    <!-- Slider for authorisation hours -->
-                    <div v-if="type_of_leave === 'authorisation'">
-                        <label>Authorisation Hour (0-2) per Month:</label>
-                        <ejs-slider
-                            v-model="authorisationHours"
-                            :min="0"
-                            :max="2"
-                            :step="0.5"
-                        ></ejs-slider>
-                        <!-- Display the current value of the slider -->
-                        <span>Current Hours: {{ authorisationHours }}</span>
-                    </div>
-                </div>
+                <section>
+                    <label class="font-medium">
+                        {{
+                            leaveForm.type_of_leave === 'authorisation' || leaveForm.type_of_leave === 'halfday'
+                                ? 'Date'
+                                : 'Start Date'
+                        }}
+                    </label>
+                    <DatePicker
+                        v-model="leaveForm.start_day"
+                        dateFormat="dd-MM-yy"
+                        :disabled-days="[0,6]"
+                        class="w-full rounded-lg p-2"
+                        placeholder="Select date"
+                    />
 
-                <div class="flex justify-end gap-2 mt-4">
-                    <PrimaryButton @click="submitLeaveRequest" class="bg-blue-500 text-white">
-                        Submit
-                    </PrimaryButton>
-                    <PrimaryButton @click="closeDialog" class="bg-red-600 text-white">
-                        Cancel
-                    </PrimaryButton>
+                    <div v-if="leaveForm.type_of_leave !== 'authorisation' && leaveForm.type_of_leave !== 'halfday'">
+                        <label class="font-medium">End Date:</label>
+                        <DatePicker
+                            v-model="leaveForm.end_day"
+                            dateFormat="dd-MM-yy"
+                            :disabled-days="[0,6]"
+                            class="w-full rounded-lg p-2"
+                            :disabled="leaveForm.type_of_leave === 'halfday' || leaveForm.type_of_leave === 'authorisation'"
+                            placeholder="Select end date"
+                        />
+                    </div>
+                </section>
+
+                <section v-if="leaveForm.type_of_leave === 'halfday'">
+                    <label class="font-medium">Session:</label>
+                    <Select
+                        v-model="leaveForm.halfday_session"
+                        :options="sessionOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Choose session"
+                        class="w-full border rounded-lg p-2"
+                    />
+                </section>
+
+                <template v-if="leaveForm.type_of_leave === 'authorisation'">
+                    <section>
+                        <label class="font-medium">Time:</label>
+                        <Select
+                            v-model="leaveForm.start_time"
+                            :options="timeOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Choose time"
+                            class="w-full border rounded-lg p-2"
+                        />
+                    </section>
+
+                    <section>
+                        <label class="font-medium">Authorisation Hours (0.5 - 2h per Month):</label>
+                        <div class="grid grid-cols-4 gap-2">
+                            <button
+                                v-for="hour in [0.5, 1, 1.5, 2]"
+                                :key="hour"
+                                @click="leaveForm.authorisationHours = hour"
+                                class="w-full text-center py-2 rounded-lg border hover:bg-gray-100"
+                                :class="{'bg-blue-500 text-white': leaveForm.authorisationHours === hour}"
+                            >
+                                {{ hour }}h
+                            </button>
+                        </div>
+                    </section>
+                </template>
+
+                <div class="flex justify-end gap-3 mt-4">
+                    <button
+                        @click="submitLeaveRequest"
+                        class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200">
+                        Request Leave
+                    </button>
+                    <button
+                        @click="closeDialog"
+                        class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition duration-200">
+                        Close
+                    </button>
                 </div>
             </div>
-        </ejs-dialog>
-        <ejs-dialog
-            :visible="showRefuseDialog"
+        </Dialog>
+        <Dialog
+            v-model:visible="showRefuseDialog"
             header="Reason for Refusal"
             :showCloseIcon="true"
             width="420px"
@@ -538,38 +602,12 @@ export default {
                     </PrimaryButton>
                 </div>
             </div>
-        </ejs-dialog>
-        <ejs-dialog
-            :visible="showRevokeDialog"
-            header="Reason for the revoke"
-            :showCloseIcon="true"
-            width="420px"
-            @close="closeDialog"
-        >
-            <div class="p-4 py-5">
-                <div class="mb-4">
-                    <label for="revokeReason" class="block text-sm font-medium text-gray-700 mb-2">
-                        Please provide the reason for the revoke
-                    </label>
-                    <textarea
-                        id="revokeReason"
-                        v-model="revokeReason"
-                        rows="4"
-                        class="w-full border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter reason here..."
-                    ></textarea>
-                </div>
-
-                <div class="flex justify-end gap-2 mt-4">
-                    <PrimaryButton @click="revokeLeave()" class="bg-blue-500 text-white">
-                        Revoke Request
-                    </PrimaryButton>
-                    <PrimaryButton @click="closeDialog" class="bg-red-600 text-white">
-                        Cancel
-                    </PrimaryButton>
-                </div>
-            </div>
-        </ejs-dialog>
-
+        </Dialog>
     </AuthenticatedLayout>
 </template>
+<style>
+.p-dialog-mask {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(5px);
+}
+</style>

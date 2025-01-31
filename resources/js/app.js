@@ -21,8 +21,10 @@ import Toast from "vue-toastification"; // Toast notifications
 import "vue-toastification/dist/index.css"; // Toast styles
 
 // Import PrimeVue and its resources
-import PrimeVue from 'primevue/config';
+import PrimeVue, {defaultOptions} from 'primevue/config';
+import {definePreset} from '@primevue/themes';
 import Lara from '@primevue/themes/lara';
+import Aura from '@primevue/themes/aura';
 import 'primeicons/primeicons.css'; // PrimeIcons
 
 // Optional: Import commonly used PrimeVue components globally
@@ -30,6 +32,23 @@ import Calendar from 'primevue/calendar';
 
 // Set the app name, defaulting to 'GRH Softtodo' if not set in environment
 const appName = import.meta.env.VITE_APP_NAME || 'GRH Softtodo';
+const MyPreset = definePreset(Aura, {
+    semantic: {
+        primary: {
+            50: '{cyan.50}',
+            100: '{cyan.100}',
+            200: '{cyan.200}',
+            300: '{cyan.300}',
+            400: '{cyan.400}',
+            500: '{cyan.500}',
+            600: '{cyan.600}',
+            700: '{cyan.700}',
+            800: '{cyan.800}',
+            900: '{cyan.900}',
+            950: '{cyan.950}'
+        }
+    }
+});
 
 // Create the Inertia app
 createInertiaApp({
@@ -37,11 +56,7 @@ createInertiaApp({
     title: (title) => `${title} - ${appName}`,
 
     // Resolve the pages dynamically using Laravel Vite Plugin
-    resolve: (name) =>
-        resolvePageComponent(
-            `./Pages/${name}.vue`,
-            import.meta.glob('./Pages/**/*.vue'),
-        ),
+    resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue'),),
 
     // Set up the Vue app instance with PrimeVue and other plugins
     setup({el, App, props, plugin}) {
@@ -49,19 +64,16 @@ createInertiaApp({
             .use(plugin) // Inertia plugin
             .use(ZiggyVue) // Ziggy plugin for route handling
             .use(Toast, { // Toast notifications plugin
-                position: "top-right",
-                timeout: 3000,
-                closeOnClick: true,
+                position: "top-right", timeout: 3000, closeOnClick: true,
             })
             .use(PrimeVue, {
                 theme: {
-                    preset: Lara,
-                    options: {
-                        prefix: 'p',
-                        darkModeSelector: '',
-                        cssLayer: false
+                    preset: MyPreset, options: {
+                        prefix: 'p', darkModeSelector: '', cssLayer: false
                     }
-                }
+                }, locale: {
+                    ...defaultOptions.locale, firstDayOfWeek: 1,
+                },
             });
 
         // Register PrimeVue components globally (optional)
