@@ -107,6 +107,10 @@
                                     </tr>
                                 @elseif(in_array($leave->type_of_leave, ['authorisation', 'halfday']))
                                     <tr>
+                                        <th>Début</th>
+                                        <td>{{ $leave->start_day->translatedFormat('d F Y') }}</td>
+                                    </tr>
+                                    <tr>
                                         <th>Heure de début</th>
                                         <td>{{ $leave->start_time}}</td>
                                     </tr>
