@@ -57,7 +57,7 @@ class LeaveController extends Controller
         $transformedEndDay = $leaveRequest->end_day
             ? Carbon::parse($leaveRequest->end_day)->addDay()
             : $transformedStartDay;
-        $transformedStartTime = Carbon::parse($leaveRequest->start_time)->addHour(1)->format('H:i');
+        $transformedStartTime = Carbon::parse($leaveRequest->start_time)->format('H:i');
 
         $user = User::with('team')->find($leaveRequest->user_id);
         $teamName = strtolower(trim($user->team->team_name ?? ''));
