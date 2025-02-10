@@ -35,6 +35,10 @@ span.is-green-square {
     background-color: green;
 }
 
+span.is-red-square {
+    background-color: red;
+}
+
 .e-schedule .e-month-view .e-appointment .e-appointment-details .e-time {
     display: none;
 }

@@ -53,13 +53,22 @@ class LeaveController extends Controller
      */
     public function store(LeaveRequest $leaveRequest, LeaveService $leaveService)
     {
+        $user = User::find($leaveRequest->user_id);
+        if (!$user) {
+            return back()->with('error', 'User not found.');
+        }
+
+        if ($leaveRequest->type_of_leave === 'deduction') {
+            $leaveService->handleLateDeduction($user, $leaveRequest);
+            return to_route('leave.index')->with('success', "Leave deduction has been saved.");
+        }
+
         $transformedStartDay = Carbon::parse($leaveRequest->start_day)->addDay();
         $transformedEndDay = $leaveRequest->end_day
             ? Carbon::parse($leaveRequest->end_day)->addDay()
             : $transformedStartDay;
         $transformedStartTime = Carbon::parse($leaveRequest->start_time)->format('H:i');
 
-        $user = User::with('team')->find($leaveRequest->user_id);
         $teamName = strtolower(trim($user->team->team_name ?? ''));
         $validBalance = $user->valid_balance;
 

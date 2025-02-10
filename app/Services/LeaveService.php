@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Http\Requests\LeaveRequest;
 use App\Mail\LeaveRequestMail;
 use App\Models\Leave;
+use App\Models\User;
 use Carbon\Carbon;
 use Exception;
 use JetBrains\PhpStorm\NoReturn;
@@ -104,5 +106,25 @@ class LeaveService
         }
 
         return $workingDays;
+    }
+
+    public function handleLateDeduction(User $user, LeaveRequest $leaveRequest): void
+    {
+        $deductionDays = $leaveRequest->deduction_days;
+
+        $today = Carbon::today();
+
+        Leave::create([
+            'user_id' => $user->id,
+            'type_of_leave' => 'deduction',
+            'start_day' => $today->format('Y/m/d'),
+            'start_time' => now()->format('H:i'),
+            'end_day' => $today->format('Y/m/d'),
+            'status_of_leave' => 'approved',
+            'authorization_hour' => 0,
+        ]);
+
+        $user->valid_balance -= $deductionDays;
+        $user->save();
     }
 }

@@ -23,9 +23,10 @@ class LeaveRequest extends FormRequest
         return [
             'start_day' => 'required|date',
             'end_day' => 'nullable|date|after_or_equal:start_day',
-            'type_of_leave' => ['required', 'in:vacation,sick,authorisation,halfday'],
+            'type_of_leave' => ['required', 'in:vacation,sick,authorisation,halfday,deduction'],
             'authorisationHours' => ['nullable', 'numeric', 'min:0', 'max:120'],
             'user_id' => ['nullable', 'numeric', 'min:0', 'max:120'],
+            'deduction_days' => ['nullable', 'numeric']
         ];
     }
 

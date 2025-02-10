@@ -1,27 +1,28 @@
 <script>
-import {DatePickerComponent, TimePickerComponent} from '@syncfusion/ej2-vue-calendars';
-import {RadioButtonComponent} from '@syncfusion/ej2-vue-buttons';
-import {SliderComponent} from '@syncfusion/ej2-vue-inputs';
-import {ScheduleComponent, Day, Month, Agenda} from '@syncfusion/ej2-vue-schedule';
-import {DropDownListComponent} from '@syncfusion/ej2-vue-dropdowns';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import {Head, router, useForm, usePage} from '@inertiajs/vue3';
-import Dialog from 'primevue/dialog';
-import PrimaryButton from "@/Components/PrimaryButton.vue";
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
-import InputText from 'primevue/inputtext';
-import Tag from 'primevue/tag';
-import moment from "moment";
-import RadioButton from 'primevue/radiobutton';
-import Fieldset from 'primevue/fieldset';
-import AutoComplete from 'primevue/autocomplete';
-import Select from 'primevue/select';
-import DatePicker from 'primevue/datepicker';
-import Slider from 'primevue/slider';
+import { DatePickerComponent, TimePickerComponent } from '@syncfusion/ej2-vue-calendars'
+import { RadioButtonComponent } from '@syncfusion/ej2-vue-buttons'
+import { SliderComponent } from '@syncfusion/ej2-vue-inputs'
+import { ScheduleComponent, Day, Month, Agenda } from '@syncfusion/ej2-vue-schedule'
+import { DropDownListComponent } from '@syncfusion/ej2-vue-dropdowns'
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import { Head, router, useForm, usePage } from '@inertiajs/vue3'
+import Dialog from 'primevue/dialog'
+import PrimaryButton from '@/Components/PrimaryButton.vue'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import InputText from 'primevue/inputtext'
+import Tag from 'primevue/tag'
+import moment from 'moment'
+import RadioButton from 'primevue/radiobutton'
+import Fieldset from 'primevue/fieldset'
+import AutoComplete from 'primevue/autocomplete'
+import Select from 'primevue/select'
+import DatePicker from 'primevue/datepicker'
+import Slider from 'primevue/slider'
+import InputNumber from 'primevue/inputnumber'
 
 export default {
-    name: "Index",
+    name: 'Index',
     components: {
         PrimaryButton,
         'ejs-schedule': ScheduleComponent,
@@ -42,44 +43,46 @@ export default {
         AutoComplete,
         Select,
         DatePicker,
-        Slider
+        Slider,
+        InputNumber
     },
     provide: {
         schedule: [Day, Month, Agenda]
     },
-    data() {
+    data () {
         return {
             page: usePage(),
             selectedLeaves: [],
             leaveTypes: [
-                {label: "Vacation", value: "vacation"},
-                {label: "Sick", value: "sick"},
-                {label: "Authorisation", value: "authorisation"},
-                {label: "Half Day", value: "halfday"}
+                { label: 'Vacation', value: 'vacation' },
+                { label: 'Sick', value: 'sick' },
+                { label: 'Authorisation', value: 'authorisation' },
+                { label: 'Half Day', value: 'halfday' },
+                { label: 'Late Deduction', value: 'deduction' }
             ],
             sessionOptions: [
-                {label: 'Morning (08:00 - 12:00)', value: 'morning'},
-                {label: 'Afternoon (13:00 - 17:00)', value: 'afternoon'}
+                { label: 'Morning (08:00 - 12:00)', value: 'morning' },
+                { label: 'Afternoon (13:00 - 17:00)', value: 'afternoon' }
             ],
             timeOptions: [
-                {label: "08:00", value: "08:00"},
-                {label: "08:30", value: "08:30"},
-                {label: "09:00", value: "09:00"},
-                {label: "09:30", value: "09:30"},
-                {label: "10:00", value: "10:00"},
-                {label: "10:30", value: "10:30"},
-                {label: "11:00", value: "11:00"},
-                {label: "11:30", value: "11:30"},
-                {label: "12:00", value: "12:00"},
-                {label: "12:30", value: "12:30"},
-                {label: "13:00", value: "13:00"},
-                {label: "13:30", value: "13:30"},
-                {label: "14:00", value: "14:00"},
-                {label: "14:30", value: "14:30"},
-                {label: "15:00", value: "15:00"},
-                {label: "15:30", value: "15:30"},
-                {label: "16:00", value: "16:00"},
-                {label: "16:30", value: "16:30"}
+                { label: '08:00', value: '08:00' },
+                { label: '08:30', value: '08:30' },
+                { label: '09:00', value: '09:00' },
+                { label: '09:30', value: '09:30' },
+                { label: '10:00', value: '10:00' },
+                { label: '10:30', value: '10:30' },
+                { label: '11:00', value: '11:00' },
+                { label: '11:30', value: '11:30' },
+                { label: '12:00', value: '12:00' },
+                { label: '12:30', value: '12:30' },
+                { label: '13:00', value: '13:00' },
+                { label: '13:30', value: '13:30' },
+                { label: '14:00', value: '14:00' },
+                { label: '14:30', value: '14:30' },
+                { label: '15:00', value: '15:00' },
+                { label: '15:30', value: '15:30' },
+                { label: '16:00', value: '16:00' },
+                { label: '16:30', value: '16:30' }
             ],
             // Schedule settings
             eventSettings: {
@@ -101,7 +104,7 @@ export default {
 
             // Table filters
             filters: {
-                global: {value: '', matchMode: 'contains'}
+                global: { value: '', matchMode: 'contains' }
             },
 
             // Leave form data using Inertia's useForm()
@@ -114,7 +117,8 @@ export default {
                 halfday_session: 'morning',
                 authorisationHours: 0,
                 team_user: null,
-                user_id: null
+                user_id: null,
+                deduction_days: null
             }),
 
             // Leave action variables
@@ -124,34 +128,34 @@ export default {
             // Dialog visibility states (will be removed later)
             showDialog: false,
             showRefuseDialog: false,
-        };
+        }
     },
     props: {
         leaves: Array,
         user: Object,
     },
     computed: {
-        approvedLeaves() {
+        approvedLeaves () {
             return this.localLeaves
                 .filter(leave => leave.status_of_leave.toLowerCase() === 'approved')
                 .map(leave => {
-                    this.users = this.$attrs.users;
-                    this.mappedUsers = this.mapToOptions(this.users, ['profile.first_name', 'profile.last_name'], 'id');
+                    this.users = this.$attrs.users
+                    this.mappedUsers = this.mapToOptions(this.users, ['profile.first_name', 'profile.last_name'], 'id')
 
-                    const user = this.users.find(u => u.id === leave.user_id);
+                    const user = this.users.find(u => u.id === leave.user_id)
 
-                    const userName = user ? `${user.profile.first_name.toUpperCase()} ${user.profile.last_name}` : 'Unknown User';
-                    const startDate = moment(leave.start_day, 'DD/MM/YYYY');
-                    const endDate = moment(leave.end_day, 'DD/MM/YYYY');
+                    const userName = user ? `${user.profile.first_name.toUpperCase()} ${user.profile.last_name}` : 'Unknown User'
+                    const startDate = moment(leave.start_day, 'DD/MM/YYYY')
+                    const endDate = moment(leave.end_day, 'DD/MM/YYYY')
 
-                    let subject = userName;
+                    let subject = userName
                     if (leave.type_of_leave === 'authorisation' && leave.start_time) {
                         const hoursFormatted = Number.isInteger(leave.authorization_hour)
                             ? `${leave.authorization_hour}h`
-                            : `${parseFloat(leave.authorization_hour).toFixed(1)}h`;
-                        subject += ` - ${leave.start_time} | (${hoursFormatted})`;
+                            : `${parseFloat(leave.authorization_hour).toFixed(1)}h`
+                        subject += ` - ${leave.start_time} | (${hoursFormatted})`
                     } else if (leave.type_of_leave === 'halfday') {
-                        subject += ` - ${leave.start_time === '08:00' ? 'Morning' : 'Afternoon'}`;
+                        subject += ` - ${leave.start_time === '08:00' ? 'Morning' : 'Afternoon'}`
                     }
 
                     return {
@@ -163,12 +167,12 @@ export default {
                         Type: leave.type_of_leave,
                         FirstName: user?.profile?.first_name ?? '',
                         LastName: user?.profile?.last_name ?? '',
-                    };
-                });
+                    }
+                })
         },
-        mappedLeaves() {
+        mappedLeaves () {
             return this.leaves.map(leave => {
-                const user = this.users.find(user => user.id === leave.user_id) || {profile: {}};
+                const user = this.users.find(user => user.id === leave.user_id) || { profile: {} }
 
                 return {
                     id: leave.id,
@@ -180,140 +184,146 @@ export default {
                     type_of_leave: leave.type_of_leave,
                     status_of_leave: leave.status_of_leave,
                     authorization_hour: leave.authorization_hour,
-                };
-            });
+                }
+            })
         },
-        isAdmin() {
-            return this.page.props.auth.user_roles.includes('admin');
+        isAdmin () {
+            return this.page.props.auth.user_roles.includes('admin')
         },
-        isProjectManager() {
-            return this.page.props.auth.user_roles.includes('project_manager');
+        isProjectManager () {
+            return this.page.props.auth.user_roles.includes('project_manager')
         }
     },
-    created() {
-        this.localLeaves = [...this.leaves];
-        this.users = this.$attrs.users;
-        this.mappedUsers = this.mapToOptions(this.users, ['profile.first_name', 'profile.last_name'], 'id');
+    created () {
+        this.localLeaves = [...this.leaves]
+        this.users = this.$attrs.users
+        this.mappedUsers = this.mapToOptions(this.users, ['profile.first_name', 'profile.last_name'], 'id')
     },
     methods: {
-        approveLeave(leaveId) {
-            router.post(route('leave.approve'), {id: leaveId}, {
+        approveLeave (leaveId) {
+            router.post(route('leave.approve'), { id: leaveId }, {
                 preserveScroll: true,
                 onSuccess: this.refreshLeaves
-            });
+            })
         },
-        deleteLeave(leaveId) {
-            router.post(route('leave.delete'), {id: leaveId}, {
+        deleteLeave (leaveId) {
+            router.post(route('leave.delete'), { id: leaveId }, {
                 preserveScroll: true,
                 onSuccess: () => {
-                    this.localLeaves = this.localLeaves.filter(leave => leave.id !== leaveId);
+                    this.localLeaves = this.localLeaves.filter(leave => leave.id !== leaveId)
                 }
-            });
+            })
         },
-        refuseLeave() {
+        refuseLeave () {
             this.leaveForm.post(route('leave.refuse'), {
                 preserveScroll: true,
                 onSuccess: this.refreshLeaves
-            });
+            })
         },
-        refreshLeaves() {
-            router.visit(route("leave.index"), {
-                only: ["leaves"],
+        refreshLeaves () {
+            router.visit(route('leave.index'), {
+                only: ['leaves'],
                 preserveScroll: true,
                 preserveState: true,
                 onSuccess: (response) => {
-                    this.localLeaves = response.props.leaves;
+                    this.localLeaves = response.props.leaves
                 }
-            });
+            })
         },
-        mapToOptions(items, labelFields, valueField = 'id') {
+        mapToOptions (items, labelFields, valueField = 'id') {
             return items.map(item => ({
                 value: item[valueField],
                 label: Array.isArray(labelFields)
                     ? labelFields.map(field => this.getNestedValue(item, field)).join(' ')
                     : this.getNestedValue(item, labelFields)
-            }));
+            }))
         },
-        onEventRender(args) {
+        onEventRender (args) {
             if (args.data.Status === 'approved') {
                 if (args.data.Type === 'authorisation') {
-                    args.element.style.backgroundColor = '#205fa9';
+                    args.element.style.backgroundColor = '#205fa9'
                 } else if (args.data.Type === 'halfday') {
-                    args.element.style.backgroundColor = '#8A2BE2';
+                    args.element.style.backgroundColor = '#8A2BE2'
                 } else if (args.data.Type === 'sick') {
-                    args.element.style.backgroundColor = '#203b48';
+                    args.element.style.backgroundColor = '#203b48'
+                } else if (args.data.Type === 'deduction') {
+                    args.element.style.backgroundColor = '#FF0000'
                 } else {
-                    args.element.style.backgroundColor = 'green';
+                    args.element.style.backgroundColor = 'green'
                 }
             } else if (args.data.Status === 'pending') {
-                args.element.style.backgroundColor = 'orange';
+                args.element.style.backgroundColor = 'orange'
             }
         },
-        getNestedValue(item, field) {
-            return field.split('.').reduce((obj, key) => obj && obj[key], item);
+        getNestedValue (item, field) {
+            return field.split('.').reduce((obj, key) => obj && obj[key], item)
         },
-        openDialog() {
-            this.showDialog = true;
+        openDialog () {
+            this.showDialog = true
         },
-        openRefuseDialog(id) {
-            this.refusedLeave = id;
-            this.showRefuseDialog = true;
+        openRefuseDialog (id) {
+            this.refusedLeave = id
+            this.showRefuseDialog = true
         },
-        closeDialog() {
-            this.showDialog = false;
-            this.showRefuseDialog = false;
+        closeDialog () {
+            this.showDialog = false
+            this.showRefuseDialog = false
         },
-        getStartTime() {
+        getStartTime () {
             switch (this.leaveForm.type_of_leave) {
                 case 'halfday':
-                    return this.leaveForm.halfday_session === 'morning' ? '07:00' : '12:00';
+                    return this.leaveForm.halfday_session === 'morning' ? '07:00' : '12:00'
                 default:
-                    return this.leaveForm.start_time;
+                    return this.leaveForm.start_time
             }
         },
-        submitLeaveRequest() {
+        submitLeaveRequest () {
+            if (this.leaveForm.type_of_leave === 'deduction') {
+                this.leaveForm.start_day = moment().format('YYYY-MM-DD')
+            }
+
             if (this.leaveForm.type_of_leave === 'halfday' || this.leaveForm.type_of_leave === 'authorisation') {
-                this.leaveForm.end_day = this.leaveForm.start_day;
+                this.leaveForm.end_day = this.leaveForm.start_day
             }
 
             this.leaveForm.user_id = this.leaveForm.team_user
                 ? this.leaveForm.team_user
-                : this.page.props.auth.user.id;
+                : this.page.props.auth.user.id
 
-            this.leaveForm.start_time = this.getStartTime();
+            this.leaveForm.start_time = this.getStartTime()
             this.leaveForm.authorisationHours = this.leaveForm.type_of_leave === 'authorisation'
                 ? Number(this.leaveForm.authorisationHours) || 0
-                : null;
+                : null
 
             router.visit(route('leave.store'), {
                 method: 'POST',
-                only: ["leaves"],
+                only: ['leaves'],
                 data: this.leaveForm.data(),
                 preserveScroll: true,
                 preserveState: true,
                 onSuccess: () => {
-                    this.closeDialog();
-                    this.localLeaves = this.leaves;
+                    this.closeDialog()
+                    this.localLeaves = this.leaves
                 },
-            });
+            })
         },
-        setEventDataSource() {
+        setEventDataSource () {
             this.eventSettings.dataSource = this.localLeaves
                 .filter(leave => leave.status_of_leave.toLowerCase() === 'approved')
                 .map(leave => {
-                    const user = this.users.find(u => u.id === leave.user_id);
-                    const userName = user ? `${user.profile.first_name.toUpperCase()} ${user.profile.last_name}` : 'Unknown User';
-                    const startDate = moment(leave.start_day, 'DD/MM/YYYY');
-                    const endDate = moment(leave.end_day, 'DD/MM/YYYY');
+                    const user = this.users.find(u => u.id === leave.user_id)
+                    const userName = user ? `${user.profile.first_name.toUpperCase()} ${user.profile.last_name}` : 'Unknown User'
+                    const startDate = moment(leave.start_day, 'DD/MM/YYYY')
+                    const endDate = moment(leave.end_day, 'DD/MM/YYYY')
 
-                    let subject = userName;
+                    let subject = userName
                     if (leave.type_of_leave === 'authorisation' && leave.start_time) {
                         const hoursFormatted = Number.isInteger(leave.authorization_hour)
                             ? `${leave.authorization_hour}h`
-                            : `${parseFloat(leave.authorization_hour).toFixed(1)}h`;
-                        subject += ` - ${leave.start_time} | (${hoursFormatted})`;
+                            : `${parseFloat(leave.authorization_hour).toFixed(1)}h`
+                        subject += ` - ${leave.start_time} | (${hoursFormatted})`
                     } else if (leave.type_of_leave === 'halfday') {
-                        subject += ` - ${leave.start_time === '08:00' ? 'Morning' : 'Afternoon'}`;
+                        subject += ` - ${leave.start_time === '08:00' ? 'Morning' : 'Afternoon'}`
                     }
 
                     return {
@@ -325,14 +335,14 @@ export default {
                         Type: leave.type_of_leave,
                         FirstName: user?.profile?.first_name ?? '',
                         LastName: user?.profile?.last_name ?? '',
-                    };
-                });
+                    }
+                })
         }
     },
     watch: {
         approvedLeaves: {
-            handler(newLeaves) {
-                this.eventSettings = {...this.eventSettings, dataSource: newLeaves};
+            handler (newLeaves) {
+                this.eventSettings = { ...this.eventSettings, dataSource: newLeaves }
             },
             deep: true,
             immediate: true
@@ -363,6 +373,9 @@ export default {
                             </div>
                             <div class="manuel-item flex gap-2 items-center"><span
                                 class="is-square is-orange-square"></span> Pending Request
+                            </div>
+                            <div class="manuel-item flex gap-2 items-center"><span
+                                class="is-square is-red-square"></span> Deduction
                             </div>
                         </div>
                         <PrimaryButton @click="openDialog" class="bg-green-600 text-white">
@@ -481,14 +494,16 @@ export default {
                     <Select
                         v-model="leaveForm.team_user"
                         :options="mappedUsers"
+                        :filter="true"
                         optionLabel="label"
                         optionValue="value"
                         placeholder="Choose a user"
+
                         class="w-full border rounded-lg p-2"
                     />
                 </section>
 
-                <section>
+                <section v-if="leaveForm.type_of_leave !== 'deduction'">
                     <label class="font-medium">
                         {{
                             leaveForm.type_of_leave === 'authorisation' || leaveForm.type_of_leave === 'halfday'
@@ -555,6 +570,19 @@ export default {
                                 {{ hour }}h
                             </button>
                         </div>
+                    </section>
+                </template>
+
+                <template v-if="isAdmin && leaveForm.type_of_leave === 'deduction'">
+                    <section>
+                        <label class="font-medium">Deducted Leave Days:</label>
+                        <InputNumber
+                            v-model="leaveForm.deduction_days"
+                            :minFractionDigits="2" :maxFractionDigits="5"
+                            fluid
+                            class="w-full border rounded-lg p-2"
+                            placeholder="Enter days to deduct"
+                        />
                     </section>
                 </template>
 
