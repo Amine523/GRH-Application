@@ -147,6 +147,8 @@ class LeaveController extends Controller
             $user->authorization_hours -= $leave->authorization_hour;
         } elseif ($leave->type_of_leave === 'halfday') {
             $user->valid_balance += 0.5;
+        } elseif ($leave->type_of_leave === 'deduction') {
+            $user->valid_balance += $leave->deduction_days;
         } else {
             $leaveDays = Carbon::parse($leave->start_day)
                     ->diffInWeekdays(Carbon::parse($leave->end_day)) + 1;

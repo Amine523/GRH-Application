@@ -122,6 +122,7 @@ class LeaveService
             'end_day' => $today->format('Y/m/d'),
             'status_of_leave' => 'approved',
             'authorization_hour' => 0,
+            'deduction_days' => $deductionDays,
         ]);
 
         $user->valid_balance -= $deductionDays;
