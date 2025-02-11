@@ -162,7 +162,7 @@ export default {
                         Id: leave.id,
                         Subject: subject,
                         StartTime: startDate.format('YYYY-MM-DD'),
-                        EndTime: endDate.format('YYYY-MM-DD'),
+                        EndTime: endDate.add(1, 'd').format('YYYY-MM-DD'),
                         Status: leave.status_of_leave,
                         Type: leave.type_of_leave,
                         FirstName: user?.profile?.first_name ?? '',
