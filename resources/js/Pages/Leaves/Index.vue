@@ -20,6 +20,8 @@ import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 import Slider from 'primevue/slider'
 import InputNumber from 'primevue/inputnumber'
+import Loading from 'vue-loading-overlay'
+import 'vue-loading-overlay/dist/css/index.css'
 
 export default {
     name: 'Index',
@@ -44,7 +46,8 @@ export default {
         Select,
         DatePicker,
         Slider,
-        InputNumber
+        InputNumber,
+        Loading
     },
     provide: {
         schedule: [Day, Month, Agenda]
@@ -128,6 +131,7 @@ export default {
             // Dialog visibility states (will be removed later)
             showDialog: false,
             showRefuseDialog: false,
+            processingLeaveRequest: false
         }
     },
     props: {
@@ -135,6 +139,9 @@ export default {
         user: Object,
     },
     computed: {
+        filteredLeaveTypes () {
+            return this.leaveTypes.filter(type => type.value !== 'deduction' || this.isAdmin)
+        },
         approvedLeaves () {
             return this.localLeaves
                 .filter(leave => leave.status_of_leave.toLowerCase() === 'approved')
@@ -278,6 +285,7 @@ export default {
             }
         },
         submitLeaveRequest () {
+            this.processingLeaveRequest = true
             if (this.leaveForm.type_of_leave === 'deduction') {
                 this.leaveForm.start_day = moment().format('YYYY-MM-DD')
             }
@@ -302,9 +310,13 @@ export default {
                 preserveScroll: true,
                 preserveState: true,
                 onSuccess: () => {
+                    this.processingLeaveRequest = false
                     this.closeDialog()
                     this.localLeaves = this.leaves
                 },
+                onError: () => {
+                    this.processingLeaveRequest = false
+                }
             })
         },
         setEventDataSource () {
@@ -478,7 +490,7 @@ export default {
                     <h3 class="text-lg font-medium mb-2">Leave Type</h3>
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                         <button
-                            v-for="(type, index) in leaveTypes"
+                            v-for="(type, index) in filteredLeaveTypes"
                             :key="index"
                             @click="leaveForm.type_of_leave = type.value"
                             class="w-full text-center py-2 px-3 rounded-lg border hover:bg-gray-100"
@@ -589,7 +601,9 @@ export default {
                 <div class="flex justify-end gap-3 mt-4">
                     <button
                         @click="submitLeaveRequest"
-                        class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200">
+                        :disabled="processingLeaveRequest"
+                        class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200
+                        disabled:opacity-50 disabled:cursor-not-allowed">
                         Request Leave
                     </button>
                     <button
@@ -631,6 +645,9 @@ export default {
                 </div>
             </div>
         </Dialog>
+        <loading v-model:active="processingLeaveRequest"
+                 :can-cancel="false"
+                 :is-full-page="true"/>
     </AuthenticatedLayout>
 </template>
 <style>
