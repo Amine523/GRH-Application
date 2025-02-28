@@ -291,7 +291,7 @@ export default {
         getStartTime () {
             switch (this.leaveForm.type_of_leave) {
                 case 'halfday':
-                    return this.leaveForm.halfday_session === 'morning' ? '07:00' : '12:00'
+                    return this.leaveForm.halfday_session === 'morning' ? '08:00' : '12:00'
                 default:
                     return this.leaveForm.start_time
             }
