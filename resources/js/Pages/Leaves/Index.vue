@@ -207,6 +207,18 @@ export default {
         this.mappedUsers = this.mapToOptions(this.users, ['profile.first_name', 'profile.last_name'], 'id')
     },
     methods: {
+        customDateSort (event) {
+            event.data.sort((a, b) => {
+                const dateA = this.parseDate(a[event.field])
+                const dateB = this.parseDate(b[event.field])
+                return dateA - dateB // Ascending order
+            })
+        },
+
+        parseDate (dateStr) {
+            const [day, month, year] = dateStr.split('/').map(Number)
+            return new Date(year, month - 1, day)
+        },
         approveLeave (leaveId) {
             router.post(route('leave.approve'), { id: leaveId }, {
                 preserveScroll: true,
@@ -432,15 +444,15 @@ export default {
                                 <h4>No leaves found</h4>
                             </template>
 
-                            <!-- Enable multiple selection -->
                             <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
-
                             <Column field="first_name" header="First Name" :sortable="true"/>
                             <Column field="last_name" header="Last Name" :sortable="true"/>
-                            <Column field="start_day" header="Start Day" :sortable="true"/>
-                            <Column field="end_day" header="End Day" :sortable="true"/>
+                            <Column field="start_day" header="Start Day" :sortable="true"
+                                    :sortFunction="(event) => customDateSort(event)"
+                            />
+                            <Column field="end_day" header="End Day" :sortable="true"
+                                    :sortFunction="(event) => customDateSort(event)"/>
                             <Column field="type_of_leave" header="Type of Leave" :sortable="true"/>
-
                             <Column bodyClass="text-center" field="status_of_leave" header="Status of Leave"
                                     :sortable="true">
                                 <template #body="slotProps">
