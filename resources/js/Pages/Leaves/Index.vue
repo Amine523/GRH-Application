@@ -143,14 +143,15 @@ export default {
             return this.leaveTypes.filter(type => type.value !== 'deduction' || this.isAdmin)
         },
         approvedLeaves () {
-            return this.localLeaves
+            const events = []
+
+            this.users = this.$attrs.users
+            this.mappedUsers = this.mapToOptions(this.users, ['profile.first_name', 'profile.last_name'], 'id')
+
+            this.localLeaves
                 .filter(leave => leave.status_of_leave.toLowerCase() === 'approved')
-                .map(leave => {
-                    this.users = this.$attrs.users
-                    this.mappedUsers = this.mapToOptions(this.users, ['profile.first_name', 'profile.last_name'], 'id')
-
+                .forEach(leave => {
                     const user = this.users.find(u => u.id === leave.user_id)
-
                     const userName = user ? `${user.profile.first_name.toUpperCase()} ${user.profile.last_name}` : 'Unknown User'
                     const startDate = moment(leave.start_day, 'DD/MM/YYYY')
                     const endDate = moment(leave.end_day, 'DD/MM/YYYY')
@@ -165,17 +166,20 @@ export default {
                         subject += ` - ${leave.start_time === '08:00' ? 'Morning' : 'Afternoon'}`
                     }
 
-                    return {
+                    const baseEvent = {
                         Id: leave.id,
                         Subject: subject,
-                        StartTime: startDate.format('YYYY-MM-DD'),
-                        EndTime: endDate.add(1, 'd').format('YYYY-MM-DD'),
                         Status: leave.status_of_leave,
                         Type: leave.type_of_leave,
                         FirstName: user?.profile?.first_name ?? '',
-                        LastName: user?.profile?.last_name ?? '',
+                        LastName: user?.profile?.last_name ?? ''
                     }
+
+                    const segments = this.splitLeaveExcludeWeekends(startDate, endDate, baseEvent)
+                    events.push(...segments)
                 })
+
+            return events
         },
         mappedLeaves () {
             return this.leaves.map(leave => {
@@ -331,36 +335,39 @@ export default {
                 }
             })
         },
-        setEventDataSource () {
-            this.eventSettings.dataSource = this.localLeaves
-                .filter(leave => leave.status_of_leave.toLowerCase() === 'approved')
-                .map(leave => {
-                    const user = this.users.find(u => u.id === leave.user_id)
-                    const userName = user ? `${user.profile.first_name.toUpperCase()} ${user.profile.last_name}` : 'Unknown User'
-                    const startDate = moment(leave.start_day, 'DD/MM/YYYY')
-                    const endDate = moment(leave.end_day, 'DD/MM/YYYY')
+        splitLeaveExcludeWeekends (startDate, endDate, baseEvent) {
+            const chunks = []
+            let current = moment(startDate)
+            let chunkStart = null
 
-                    let subject = userName
-                    if (leave.type_of_leave === 'authorisation' && leave.start_time) {
-                        const hoursFormatted = Number.isInteger(leave.authorization_hour)
-                            ? `${leave.authorization_hour}h`
-                            : `${parseFloat(leave.authorization_hour).toFixed(1)}h`
-                        subject += ` - ${leave.start_time} | (${hoursFormatted})`
-                    } else if (leave.type_of_leave === 'halfday') {
-                        subject += ` - ${leave.start_time === '08:00' ? 'Morning' : 'Afternoon'}`
-                    }
+            while (current <= endDate) {
+                const isWeekday = current.isoWeekday() <= 5
 
-                    return {
-                        Id: leave.id,
-                        Subject: subject,
-                        StartTime: startDate.format('YYYY-MM-DD'),
-                        EndTime: endDate.format('YYYY-MM-DD'),
-                        Status: leave.status_of_leave,
-                        Type: leave.type_of_leave,
-                        FirstName: user?.profile?.first_name ?? '',
-                        LastName: user?.profile?.last_name ?? '',
+                if (isWeekday) {
+                    if (!chunkStart) chunkStart = current.clone()
+                } else {
+                    if (chunkStart) {
+                        chunks.push({
+                            ...baseEvent,
+                            StartTime: chunkStart.format('YYYY-MM-DD'),
+                            EndTime: current.clone().format('YYYY-MM-DD')
+                        })
+                        chunkStart = null
                     }
+                }
+
+                current.add(1, 'day')
+            }
+
+            if (chunkStart && chunkStart.isSameOrBefore(endDate)) {
+                chunks.push({
+                    ...baseEvent,
+                    StartTime: chunkStart.format('YYYY-MM-DD'),
+                    EndTime: endDate.add(1,'day').format('YYYY-MM-DD')
                 })
+            }
+
+            return chunks
         }
     },
     watch: {
