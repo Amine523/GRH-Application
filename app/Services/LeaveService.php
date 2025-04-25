@@ -77,12 +77,8 @@ class LeaveService
      */
     private function handleStandardLeave(Leave $leave, $daysToDeduct): void
     {
-        if ($leave->user->valid_balance >= $daysToDeduct) {
-            $leave->user->valid_balance -= $daysToDeduct;
-            $leave->status_of_leave = 'approved';
-        } else {
-            throw new Exception('Not enough valid balance available.');
-        }
+        $leave->user->valid_balance -= $daysToDeduct;
+        $leave->status_of_leave = 'approved';
 
         $leave->user->save();
         $leave->save();
