@@ -57,7 +57,6 @@ class LeaveController extends Controller
         if (!$user) {
             return back()->with('error', 'User not found.');
         }
-
         if ($leaveRequest->type_of_leave === 'deduction') {
             $leaveService->handleLateDeduction($user, $leaveRequest);
             return to_route('leave.index')->with('success', "Leave deduction has been saved.");
@@ -70,13 +69,6 @@ class LeaveController extends Controller
         $transformedStartTime = Carbon::parse($leaveRequest->start_time)->format('H:i');
 
         $teamName = strtolower(trim($user->team->team_name ?? ''));
-        $validBalance = $user->valid_balance;
-
-        $numberOfDays = $this->leaveRepository->getWeekdaysBetween($transformedStartDay, $transformedEndDay);
-
-        if ($validBalance < $numberOfDays && !in_array($leaveRequest->type_of_leave, ['vacation', 'authorisation'])) {
-            return back()->with('error', 'Not enough leave balance. Leave submitted but requires further review.');
-        }
 
         $leave = $this->leaveRepository->createLeave(
             $leaveRequest,
