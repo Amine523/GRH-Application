@@ -211,17 +211,30 @@ export default {
         this.mappedUsers = this.mapToOptions(this.users, ['profile.first_name', 'profile.last_name'], 'id')
     },
     methods: {
-        customDateSort (event) {
+        customDateSort(event, field) {
             event.data.sort((a, b) => {
-                const dateA = this.parseDate(a[event.field])
-                const dateB = this.parseDate(b[event.field])
-                return dateA - dateB // Ascending order
-            })
-        },
+                const dateA = this.parseDate(a[field]);
+                const dateB = this.parseDate(b[field]);
+                if (dateA < dateB) return -1;
+                if (dateA > dateB) return 1;
+                return 0;
+            });
 
-        parseDate (dateStr) {
-            const [day, month, year] = dateStr.split('/').map(Number)
-            return new Date(year, month - 1, day)
+            if (event.order === -1) {
+                event.data.reverse();
+            }
+        },
+        parseDate(dateStr) {
+            if (!dateStr) return new Date(0);
+
+            const parts = dateStr.split('/');
+            if (parts.length !== 3) return new Date(0);
+
+            const day = parts[0].padStart(2, '0');
+            const month = parts[1].padStart(2, '0');
+            const year = parts[2];
+
+            return new Date(`${year}-${month}-${day}T00:00:00`);
         },
         approveLeave (leaveId) {
             router.post(route('leave.approve'), { id: leaveId }, {
@@ -455,10 +468,13 @@ export default {
                             <Column field="first_name" header="First Name" :sortable="true"/>
                             <Column field="last_name" header="Last Name" :sortable="true"/>
                             <Column field="start_day" header="Start Day" :sortable="true"
-                                    :sortFunction="(event) => customDateSort(event)"
-                            />
+                                     :sort-field="(row) => this.parseDate(row.start_day).getTime()"
+                                     :sort-function="(event) => this.customDateSort(event, 'start_day')">
+                            </Column>
                             <Column field="end_day" header="End Day" :sortable="true"
-                                    :sortFunction="(event) => customDateSort(event)"/>
+                                    :sort-field="(row) => this.parseDate(row.end_day).getTime()"
+                                    :sort-function="(event) => this.customDateSort(event, 'end_day')">
+                            </Column>
                             <Column field="type_of_leave" header="Type of Leave" :sortable="true"/>
                             <Column bodyClass="text-center" field="status_of_leave" header="Status of Leave"
                                     :sortable="true">
