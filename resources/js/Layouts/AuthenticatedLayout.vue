@@ -38,25 +38,27 @@ const showingNavigationDropdown = ref(false);
                                     :active="route().current('dashboard')">
                                     Dashboard
                                 </NavLink>
+                                
+        
                                 <NavLink
                                     :href="route('profile.edit')"
                                     :active="route().current('profile.edit')">
                                     Profile
                                 </NavLink>
                                 <NavLink
-                                    v-if="$page.props.auth.user_roles[0] === 'admin'"
-                                    :href="route('user.index')"
-                                    :active="route().current('user.index')">
-                                    User List
-                                </NavLink>
+    v-if="$page.props.auth?.user_roles?.includes('admin')"
+    :href="route('users.index')"
+    :active="route().current('users.index')">
+    User List
+</NavLink>
                                 <NavLink
                                     :href="route('teams.index')"
                                     :active="route().current('teams.index')">
                                     Teams
                                 </NavLink>
                                 <NavLink
-                                    :href="route('leave.index')"
-                                    :active="route().current('leave.index')">
+                                    :href="route('leaves.index')"
+                                    :active="route().current('leaves.index')">
                                     Leave Request
                                 </NavLink>
                             </div>
@@ -169,9 +171,9 @@ const showingNavigationDropdown = ref(false);
                             Profile
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
-                            v-if="$page.props.auth.user_roles[0] === 'admin'"
-                            :href="route('user.index')"
-                            :active="route().current('user.index')">
+                           v-if="$page.props.auth?.user_roles?.includes('admin')"
+                            :href="route('users.index')"
+                            :active="route().current('users.index')">
                             User List
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
@@ -180,8 +182,8 @@ const showingNavigationDropdown = ref(false);
                             Teams
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
-                            :href="route('leave.index')"
-                            :active="route().current('leave.index')">
+                            :href="route('leaves.index')"
+                            :active="route().current('leaves.index')">
                             Leave Request
                         </ResponsiveNavLink>
                     </div>

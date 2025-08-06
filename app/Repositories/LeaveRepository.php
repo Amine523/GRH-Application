@@ -26,7 +26,7 @@ class LeaveRepository
             'start_time' => $startTime,
             'end_day' => $endDate->format('Y/m/d'),
             'status_of_leave' => 'pending',
-            'authorization_hour' => (float)$data->authorisationHours,
+            'authorization_hour' => $data->type_of_leave === 'authorisation' ? (float)$data->authorisation_hour : null,
         ]);
     }
 

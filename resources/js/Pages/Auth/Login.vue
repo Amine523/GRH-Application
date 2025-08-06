@@ -1,37 +1,42 @@
 <script setup>
-import Checkbox from '@/Components/Checkbox.vue';
-import GuestLayout from '@/Layouts/GuestLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import Checkbox from '@/Components/Checkbox.vue'; // Composant case à cocher
+import GuestLayout from '@/Layouts/GuestLayout.vue'; // Layout pour utilisateur non connecté (invité)
+import InputError from '@/Components/InputError.vue'; // Composant affichage erreurs formulaire
+import InputLabel from '@/Components/InputLabel.vue'; // Composant label champ formulaire
+import PrimaryButton from '@/Components/PrimaryButton.vue'; // Composant bouton principal
+import TextInput from '@/Components/TextInput.vue'; // Composant input texte
+import { Head, Link, useForm } from '@inertiajs/vue3'; // Head pour titre page, Link pour navigation Inertia, useForm pour gestion formulaire
 
+// Props reçues depuis le serveur
 defineProps({
-    canResetPassword: {
+    canResetPassword: { // Indique si on peut réinitialiser le mot de passe (affiche lien)
         type: Boolean,
     },
-    status: {
+    status: { // Message de status à afficher (ex: succès connexion)
         type: String,
     },
 });
 
+// Initialisation du formulaire avec champs et valeurs initiales
 const form = useForm({
-    email: '',
-    password: '',
-    remember: false,
+    email: '', // Email utilisateur
+    password: '', // Mot de passe
+    remember: false, // Case "se souvenir de moi"
 });
 
+// Fonction appelée à la soumission du formulaire
 const submit = () => {
-    form.post(route('login'), {
-        onFinish: () => form.reset('password'),
+    form.post(route('login'), { // Envoie via POST vers la route login de Laravel
+        onFinish: () => form.reset('password'), // Reset le champ mot de passe après soumission (pour vider)
     });
 };
 </script>
 
 <template>
-    <GuestLayout>
-        <Head title="Log in" />
+    <GuestLayout> <!-- Utilisation du layout invité -->
+        <Head title="Log in" /> <!-- Titre de la page -->
+
+        <!-- Décorations graphiques d’arrière-plan -->
         <div class="bg-gray-50 text-gray/50 dark:bg-gray dark:text-white/50">
             <img
                 id="background"
@@ -45,12 +50,16 @@ const submit = () => {
                 src="/images/background.svg"
                 style="z-index: -1;"
             />
-            </div>
+        </div>
+
+        <!-- Affichage d’un message de status si existant -->
         <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
             {{ status }}
         </div>
 
+        <!-- Formulaire de connexion -->
         <form @submit.prevent="submit">
+            <!-- Champ Email -->
             <div>
                 <InputLabel for="email" value="Email" />
 
@@ -58,15 +67,16 @@ const submit = () => {
                     id="email"
                     type="email"
                     class="mt-1 block w-full"
-                    v-model="form.email"
+                    v-model="form.email" 
                     required
                     autofocus
                     autocomplete="username"
-                />
+                /><!-- Liaison bidirectionnelle avec form.email -->
 
-                <InputError class="mt-2" :message="form.errors.email" />
+                <InputError class="mt-2" :message="form.errors.email" /> <!-- Affichage erreur email -->
             </div>
 
+            <!-- Champ Mot de passe -->
             <div class="mt-4">
                 <InputLabel for="password" value="Password" />
 
@@ -79,19 +89,20 @@ const submit = () => {
                     autocomplete="current-password"
                 />
 
-                <InputError class="mt-2" :message="form.errors.password" />
+                <InputError class="mt-2" :message="form.errors.password" /> <!-- Affichage erreur mot de passe -->
             </div>
 
+            <!-- Checkbox "Se souvenir de moi" -->
             <div class="mt-4 block">
                 <label class="flex items-center">
                     <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="ms-2 text-sm text-gray-600"
-                        >Remember me</span
-                    >
+                    <span class="ms-2 text-sm text-gray-600">Remember me</span>
                 </label>
             </div>
 
+            <!-- Actions en bas du formulaire -->
             <div class="mt-4 flex items-center justify-end">
+                <!-- Lien "Mot de passe oublié" si la réinitialisation est activée -->
                 <Link
                     v-if="canResetPassword"
                     :href="route('password.request')"
@@ -100,11 +111,13 @@ const submit = () => {
                     Forgot your password?
                 </Link>
 
+                <!-- Bouton de connexion -->
                 <PrimaryButton
                     class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
+                    :class="{ 'opacity-25': form.processing }" 
+                    :disabled="form.processing" 
+                ><!-- Diminue opacité lors du traitement -->
+                <!-- Désactive bouton pendant requête -->
                     Log in
                 </PrimaryButton>
             </div>

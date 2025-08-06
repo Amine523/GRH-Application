@@ -6,6 +6,7 @@ use App\Http\Requests\LeaveRequest;
 use App\Mail\LeaveRequestMail;
 use App\Models\Leave;
 use App\Models\User;
+use App\Models\Holiday;
 use Carbon\Carbon;
 use Exception;
 use JetBrains\PhpStorm\NoReturn;
@@ -59,6 +60,14 @@ class LeaveService
 
         if ($totalHoursWithCurrentLeave > 6) {
             throw new Exception('User has already reached the monthly limit of 6 authorization hours.');
+            foreach ($admins as $admin) {
+                $userName=$user->profile ? "{$user->profie->first_name} {$user->profile->last_name}" :$user->email;
+                $message= "l'utilisation {$userName}  a depassé la durée maximale d'autorisation pour ce mois. Total des heures : {$totalHoursWithCurrentLeave}h. ";
+                Mail::raw ($message,function ($mail) use ($admin){
+                    $mail->to($admin->email)->subject ('Alerte : Dépassement d\'heures d\'autorisation');
+
+                });
+            }
         }
 
         if ($totalHoursWithCurrentLeave == 6) {
@@ -84,6 +93,29 @@ class LeaveService
         $leave->save();
     }
 
+    /**
+     * Liste des jours fériés fixes en Tunisie (format: 'm-d')
+     * @var array
+     */
+    private $tunisianHolidays = [
+        '01-01', // Nouvel An
+        '03-20', // Fête de l'Indépendance
+        '04-09', // Fête des Martyrs
+        '05-01', // Fête du Travail
+        '07-25', // Fête de la République
+        '08-13', // Fête de la Femme et de la Famille
+        '10-15', // Fête de l'Évacuation
+        '12-17', // Fête de la Révolution
+    ];
+
+    /**
+     * Calcule le nombre de jours ouvrés entre deux dates
+     * Ne compte pas les week-ends ni les jours fériés tunisiens
+     *
+     * @param string $startDate Date de début
+     * @param string $endDate Date de fin
+     * @return int Nombre de jours ouvrés
+     */
     public function countWorkingDays($startDate, $endDate): int
     {
         if (!$startDate || !$endDate) {
@@ -92,13 +124,22 @@ class LeaveService
 
         $startDate = Carbon::parse($startDate);
         $endDate = Carbon::parse($endDate);
-
         $workingDays = 0;
-        while ($startDate <= $endDate) {
-            if (!in_array($startDate->dayOfWeek, [Carbon::SATURDAY, Carbon::SUNDAY])) {
+        $currentDate = $startDate->copy();
+
+        while ($currentDate->lte($endDate)) {
+            // Vérifier si c'est un week-end
+            $isWeekend = in_array($currentDate->dayOfWeek, [Carbon::SATURDAY, Carbon::SUNDAY]);
+            
+            // Vérifier si c'est un jour férié (fixe)
+            $isHoliday = in_array($currentDate->format('m-d'), $this->tunisianHolidays);
+
+            // Incrémenter uniquement pour les jours ouvrés (ni week-end, ni férié)
+            if (!$isWeekend && !$isHoliday) {
                 $workingDays++;
             }
-            $startDate->addDay();
+
+            $currentDate->addDay();
         }
 
         return $workingDays;

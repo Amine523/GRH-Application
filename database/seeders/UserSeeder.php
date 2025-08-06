@@ -15,8 +15,9 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        $user = User::create([
+        $user = User::updateOrCreate([
             "email"=>"admin@softtodo.com",
+        ],[
             "password"=> Hash::make('password'),
         ]);
         $user->assignRole('admin');

@@ -155,12 +155,10 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import {useForm, usePage} from '@inertiajs/vue3';
-import {useToast} from 'vue-toastification';
+import { useForm, usePage, router } from '@inertiajs/vue3';
 import SelectItems from '@/Components/SelectItems.vue';
 
-const toast = useToast();
-const {roles, teams, user} = usePage().props;
+const { roles, teams, user } = usePage().props;
 
 // Map roles and teams to options
 const mapToOptions = (items, labelField, valueField = 'id') =>
@@ -173,15 +171,50 @@ const roleOptions = mapToOptions(roles, 'name', 'name');
 const teamsOptions = mapToOptions(teams, 'team_name');
 
 // Initialize form with existing user data if editing
+// Calculate leave balance proportionally from current/next month until end of year
+const calculateLeaveBalance = () => {
+    const vacationDaysPerMonth = 1.66;
+    const sickLeaveDays = 3;
+    
+    // Get current date
+    const now = new Date();
+    const currentDate = now.getDate();
+    let currentMonth = now.getMonth(); // 0-11 (January-December)
+    
+    // If current date is after the 15th, start from next month
+    if (currentDate > 15) {
+        currentMonth += 1; // Move to next month
+    }
+    
+    // Calculate remaining months in the year (including current/next month)
+    const remainingMonths = 12 - currentMonth;
+    
+    // Calculate vacation days proportionally for remaining months
+    let calculatedVacation = 0;
+    if (remainingMonths > 0) {
+        calculatedVacation = Math.round(vacationDaysPerMonth * remainingMonths * 10) / 10; // Keep one decimal
+    }
+    
+    return {
+        vacationDays: calculatedVacation,
+        sickLeaveDays: sickLeaveDays,
+        total: calculatedVacation + sickLeaveDays
+    };
+};
+
+// Calculate leave balance for the current year
+const leaveBalance = calculateLeaveBalance();
+
 const form = useForm({
-    email: user ? user.email : '',
-    first_name: user ? user.profile.first_name : '',
-    last_name: user ? user.profile.last_name : '',
-    phone_number: user ? user.profile.phone_number : '',
-    address: user ? user.profile.address : '',
-    role_id: user ? user.roles[0].name : '',
-    team_id: user ? user.team_id : '',
-    valid_balance: user ? user.valid_balance : '',
+    first_name: user?.first_name ?? '',
+    last_name: user?.last_name ?? '',
+    email: user?.email ?? '',
+    phone_number: user?.profile?.phone_number ?? '',
+    address: user?.profile?.address ?? '',
+    role_id: user?.roles?.[0]?.name ?? '',
+    team_id: user?.team_id ?? '',
+    valid_balance: user?.valid_balance ?? leaveBalance.total.toString(),
+    leave_balance: user?.leave_balance ?? leaveBalance.total.toString(),
     profile_picture: null,
     _method: 'post',
 });
@@ -195,10 +228,16 @@ const createUser = () => {
         forceFormData: true,
         preserveScroll: true,
         onSuccess: () => {
-            toast.success('User ' + (user ? 'updated' : 'created') + ' successfully!');
+            // Using Inertia's flash message
+            router.visit(route('users.index'), {
+                only: ['flash'],
+                onSuccess: () => {
+                    // This will show the flash message on the users index page
+                }
+            });
         },
         onError: () => {
-            toast.error('There was an error ' + (user ? 'updating' : 'creating') + ' the user.');
+            // Error handling can be shown using form.errors in the template
         }
     });
 };

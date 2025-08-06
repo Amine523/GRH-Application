@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
-
 class Leave extends Model
 {
     use SoftDeletes;
@@ -36,7 +35,7 @@ class Leave extends Model
         $workingDays = 0;
 
         while ($startDate <= $endDate) {
-            if (!in_array($startDate->dayOfWeek, [Carbon::SATURDAY, Carbon::SUNDAY])) {
+            if (!in_array($startDate->dayOfWeek, [Carbon::SATURDAY, Carbon::SUNDAY, Carbon::Holiday])) {
                 $workingDays++;
             }
             $startDate->addDay();
@@ -52,4 +51,5 @@ class Leave extends Model
             'end_day' => 'datetime:d/m/Y',
         ];
     }
+
 }

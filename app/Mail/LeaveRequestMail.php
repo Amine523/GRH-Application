@@ -15,12 +15,14 @@ class LeaveRequestMail extends Mailable
     public $leave;
     public $subject;
     public $content;
+    public $recipientName;
 
-    public function __construct(string $fullName, string $type, $leave = null)
+    public function __construct(string $fullName, string $type, $leave = null, string $recipientName = null)
     {
         $this->fullName = $fullName;
         $this->type = $type;
         $this->leave = $leave;
+        $this->recipientName = $recipientName;
 
         $this->setEmailContent();
     }
@@ -45,6 +47,26 @@ class LeaveRequestMail extends Mailable
                 $this->subject = "Votre demande de $leaveTypeLabel a été refusée";
                 $this->content = "<p>Votre demande de <strong>$leaveTypeLabel</strong> a été refusée pour la raison suivante :
                                   <strong>" . ($this->leave?->leaveReason ?? 'Non spécifiée') . "</strong>.</p>";
+                break;
+
+            case 'admin-pending-approval':
+                $recipientName = $this->recipientName ?? 'Administrateur';
+                $this->subject = "Nouvelle demande de $leaveTypeLabel nécessitant une approbation";
+                $this->content = "<p>Bonjour <strong>$recipientName</strong>,</p>";
+                $this->content .= "<p>Une nouvelle demande de <strong>$leaveTypeLabel</strong> a été soumise par <strong>{$this->fullName}</strong> et nécessite votre attention.</p>";
+                $this->content .= "<p><strong>Détails de la demande :</strong></p>";
+                $this->content .= "<ul>";
+                $this->content .= "<li><strong>Type :</strong> " . ucfirst($this->leave->type_of_leave) . "</li>";
+                $this->content .= "<li><strong>Date de début :</strong> " . $this->leave->start_day->format('d/m/Y') . "</li>";
+                if ($this->leave->end_day) {
+                    $this->content .= "<li><strong>Date de fin :</strong> " . $this->leave->end_day->format('d/m/Y') . "</li>";
+                }
+                if ($this->leave->start_time) {
+                    $this->content .= "<li><strong>Heure de début :</strong> " . $this->leave->start_time . "</li>";
+                }
+                $this->content .= "<li><strong>Statut :</strong> En attente d'approbation</li>";
+                $this->content .= "</ul>";
+                $this->content .= "<p>Veuillez vous connecter à l'application pour traiter cette demande.</p>";
                 break;
 
             case 'hr-notification':

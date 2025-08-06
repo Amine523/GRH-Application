@@ -1,35 +1,78 @@
 <template>
     <section>
-        <header class="mb-6">
+        <header class="mb-6 flex justify-between items-center">
             <h2 class="text-lg font-medium text-gray-900">Team List</h2>
+            <Link 
+                v-if="isAdmin" 
+                :href="route('teams.create')" 
+                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
+            >
+                Add New Team
+            </Link>
         </header>
+
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div v-for="team in teams" :key="team.id" class="flex flex-col justify-center items-center p-6 border rounded-lg shadow-lg bg-white space-y-4 text-center">
-                <div class="w-full mb-4">
+            <div 
+                v-for="team in teams" 
+                :key="team.id" 
+                class="flex flex-col p-6 border rounded-lg shadow-lg bg-white space-y-4"
+            >
+                <div class="mb-4">
                     <p class="text-sm font-semibold text-gray-600">Team Name</p>
-                    <p class="text-xl font-bold text-gray-800">{{ team?.team_name }}</p>
+                    <p class="text-xl font-bold text-gray-800">{{ team.team_name }}</p>
                 </div>
-                <div class="w-full mb-4">
-                    <p class="text-sm font-semibold text-gray-600">Project Manager Name</p>
+                
+                <div class="mb-4">
+                    <p class="text-sm font-semibold text-gray-600">Project Manager</p>
                     <p class="text-lg text-gray-800">
-                        {{ team?.project_manager?.first_name }} {{ team?.project_manager?.last_name }}
+                        {{ team.project_manager?.profile?.first_name }} {{ team.project_manager?.profile?.last_name }}
                     </p>
                 </div>
-                <div class="w-full mb-4">
-                    <p class="text-sm font-semibold text-gray-600">Team Members with Valid Balance</p>
-                    <div v-for="member in team.members" :key="member.id">
-                        {{ member.first_name }}    {{ member.last_name }} 	&#10132; {{ member.valid_balance }}
+                
+                <div class="mb-4">
+                    <p class="text-sm font-semibold text-gray-600 mb-2">Team Members</p>
+                    <div 
+                        v-for="member in team.employees" 
+                        :key="member.id" 
+                        class="flex justify-between items-center py-1"
+                    >
+                        <span>
+                            {{ member.profile?.first_name }} {{ member.profile?.last_name }} 
+                            <span v-if="member.valid_balance !== undefined" class="text-gray-500">({{ member.valid_balance }})</span>
+                        </span>
                     </div>
                 </div>
-                <div class="flex justify-center items-center gap-4 mt-4">
-                    <!-- Display buttons for admin only -->
-                    <PrimaryButton v-if="isAdmin" @click="editTeam(team.id)" class="px-4 py-2 bg-#082f49 text-white rounded-md">
+                
+                <div class="flex flex-wrap gap-2 mt-auto">
+                    <Link 
+                        v-if="isAdmin || team.project_manager_id === auth.user.id"
+                        :href="route('teams.show', team.id)"
+                        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition flex items-center justify-center"
+                        :title="isAdmin ? 'View and manage team members' : 'View team details'"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <span>Manage Team</span>
+                    </Link>
+                    
+                    <Link 
+                        v-if="isAdmin"
+                        :href="route('teams.edit', team.id)" 
+                        class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+                    >
                         Edit
-                    </PrimaryButton>
-
-                    <PrimaryButton v-if="isAdmin" @click="deleteTeam(team.id)" class="px-4 py-2 bg-red-500 text-white rounded-md">
-                        Delete
-                    </PrimaryButton>
+                    </Link>
+                    
+                    <button
+                        v-if="isAdmin"
+                        @click="confirmDelete(team.id, team.team_name)" 
+                        class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+                        :disabled="deleteInProgress"
+                    >
+                        <span v-if="deleteInProgress">Deleting...</span>
+                        <span v-else>Delete</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -37,38 +80,68 @@
 </template>
 
 <script setup>
-import { router } from '@inertiajs/vue3';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import { useToast } from "vue-toastification";
-import "vue-toastification/dist/index.css";
+import { ref } from 'vue';
+import { router, Link } from '@inertiajs/vue3';
 
 const props = defineProps({
-    teams: Array,
-    isAdmin: Boolean, // Accept isAdmin as a prop
+    teams: {
+        type: Array,
+        required: true,
+    },
+    auth: {
+        type: Object,
+        required: true,
+    },
+    users: {
+        type: Array,
+        default: () => [],
+    },
+    isAdmin: {
+        type: Boolean,
+        default: false,
+    },
 });
 
-const toast = useToast();
+const deleteInProgress = ref(false);
 
-const deleteTeam = (id) => {
-    if (confirm('Are you sure you want to delete this team?')) {
-        router.delete(`/teams/${id}`, {
-            preserveScroll: true,
-            onSuccess: () => {
-                toast.success('Team deleted successfully!');
-            },
-            onError: () => {
-                toast.error('There was an error deleting the team.');
-            }
-        });
+const isProjectManager = props.auth.roles?.includes('project_manager') || false;
+
+const confirmDelete = (teamId, teamName) => {
+    if (confirm(`Are you sure you want to delete the team "${teamName}"? This action cannot be undone.`)) {
+        deleteTeam(teamId);
     }
 };
 
-const editTeam = (id) => {
-    router.get(`/teams/${id}/edit`);
+const deleteTeam = (teamId) => {
+    if (!teamId) return;
+    
+    deleteInProgress.value = true;
+    
+    router.delete(route('teams.destroy', teamId), {
+        preserveScroll: true,
+        onSuccess: () => {
+            deleteInProgress.value = false;
+        },
+        onError: () => {
+            deleteInProgress.value = false;
+            alert('Failed to delete team. Please try again.');
+        }
+    });
 };
 
-// Function to create a new team
-const createTeam = () => {
-    router.get(`/teams/create`); // Redirect to the create team page
+const removeMember = (team, memberId) => {
+    if (!confirm('Are you sure you want to remove this member from the team?')) {
+        return;
+    }
+    
+    router.delete(route('teams.members.remove', { 
+        team: team.id, 
+        member: memberId 
+    }), {
+        preserveScroll: true,
+        onError: () => {
+            alert('Failed to remove member. Please try again.');
+        }
+    });
 };
 </script>

@@ -65,7 +65,7 @@ class UserController extends Controller
         $user->profile()->create([...$profileUpdateRequest->validated(), 'profile_picture' => $filePath]);
         $user->assignRole($userRoleRequest->role_id);
         Mail::to($user->email)->send(new WelcomeNewUserMail($user));
-        return to_route('user.index');
+        return to_route('users.index')->with('success', 'User created successfully.');
     }
 
     /**
@@ -88,9 +88,31 @@ class UserController extends Controller
     {
         $roles = Role::all();
         $teams = Team::all();
+        
+        // Charger les relations nécessaires
         $user->load(['profile', 'roles']);
+        
+        // Créer un tableau avec les données formatées pour la vue
+        $userData = [
+            'id' => $user->id,
+            'email' => $user->email,
+            'team_id' => $user->team_id,
+            'profile' => $user->profile ? [
+                'first_name' => $user->profile->first_name ?? '',
+                'last_name' => $user->profile->last_name ?? '',
+                'phone_number' => $user->profile->phone_number ?? '',
+                'profile_picture' => $user->profile->profile_picture ?? null,
+            ] : [
+                'first_name' => '',
+                'last_name' => '',
+                'phone_number' => '',
+                'profile_picture' => null,
+            ],
+            'roles' => $user->roles->pluck('id')->toArray(),
+        ];
+        
         return Inertia::render('Users/Edit', [
-            'user' => $user,
+            'user' => $userData,
             'roles' => $roles,
             'teams' => $teams,
         ]);
@@ -99,7 +121,7 @@ class UserController extends Controller
     public function warning(User $user)
     {
         Mail::to($user->email)->send(new WarningUser($user->profile->first_name));
-        return to_route('user.index');
+        return to_route('users.index');
     }
 
     public function update(ProfileUpdateRequest $request, User $user, UserRoleRequest $userRoleRequest, UserUpdateRequest $userRequest)
@@ -130,7 +152,7 @@ class UserController extends Controller
             }
         }
 
-        return to_route('user.index');
+        return to_route('users.index')->with('success', 'User updated successfully.');
     }
 
     /**
@@ -140,6 +162,6 @@ class UserController extends Controller
     {
         $user->delete();
 
-        return to_route('user.index');
+        return to_route('users.index');
     }
 }

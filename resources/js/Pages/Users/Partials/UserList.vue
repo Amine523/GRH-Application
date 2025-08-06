@@ -28,7 +28,7 @@
                         </div>
                     </th>
                     <td class="px-6 py-4">
-                        {{ user?.roles[0].name }}
+                        {{ user?.roles?.[0]?.name || 'No role assigned' }}
                     </td>
                     <td class="px-6 py-4">
                         {{ user?.profile?.phone_number }}

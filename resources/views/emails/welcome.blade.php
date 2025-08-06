@@ -80,7 +80,7 @@
         <p>Cordialement,<br>L'équipe Softtodo</p>
     </div>
     <div class="footer">
-        © 2024 Softtodo. Tous droits réservés.
+        © 2025 Softtodo. Tous droits réservés.
     </div>
 </div>
 </body>

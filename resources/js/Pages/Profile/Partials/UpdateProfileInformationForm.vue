@@ -1,35 +1,43 @@
 <script setup>
+// Import des fonctionnalités et composants nécessaires
 import { ref } from 'vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
-import { useForm, usePage } from '@inertiajs/vue3';
+import InputError from '@/Components/InputError.vue';        // Affiche les messages d'erreur
+import InputLabel from '@/Components/InputLabel.vue';        // Labels pour les champs
+import PrimaryButton from '@/Components/PrimaryButton.vue';  // Boutons primaires stylisés
+import TextInput from '@/Components/TextInput.vue';          // Champs input stylisés
+import { useForm, usePage } from '@inertiajs/vue3';          // Gestion formulaire + accès aux props Inertia
 
+// Récupération de l'utilisateur connecté depuis les props Inertia
 const user = usePage().props.auth.user;
+
+// Déstructuration des infos utilisateur récupérées depuis la page (profil)
 const { first_name, last_name, address, phone_number, profile_picture } = usePage().props;
 
+// Initialisation du formulaire avec les données actuelles (ou chaînes vides)
 const form = useForm({
     first_name: first_name || '',
     last_name: last_name || '',
     address: address || '',
     phone_number: phone_number || '',
-    profile_picture: null,
-    profile_file:null,
-    _method : 'patch'
+    profile_picture: null,    // Pour le fichier image uploadé (input type file)
+    profile_file: null,       // Apparemment non utilisé dans ce code, pourrait être supprimé
+    _method : 'patch'         // Pour indiquer la méthode HTTP PATCH (mise à jour)
 });
 
+// Booléen pour activer/désactiver le mode édition des champs
 const isEditing = ref(false);
 
+// Active le mode édition (autorise la modification des champs)
 const enableEditing = () => {
     isEditing.value = true;
 };
 
+// Soumission du formulaire vers la route profile.update
 const submitForm = () => {
     form.post(route('profile.update'), {
-        forceFormData: true,
+        forceFormData: true, // Important pour envoyer les fichiers via FormData
         onSuccess: () => {
-            isEditing.value = false;
+            isEditing.value = false; // Désactive mode édition après succès
         }
     });
 };
@@ -37,6 +45,7 @@ const submitForm = () => {
 
 <template>
     <section>
+        <!-- En-tête avec titre et description -->
         <header>
             <h2 class="text-lg font-medium text-gray-900">
                 Profile Information
@@ -47,11 +56,12 @@ const submitForm = () => {
             </p>
         </header>
 
-        <form
-            @submit.prevent="submitForm"
-            class="mt-3 space-y-3"
-        >
+        <!-- Formulaire -->
+        <form @submit.prevent="submitForm" class="mt-3 space-y-3">
+
+            <!-- Ligne pour prénom et nom -->
             <div class="flex space-x-4">
+                <!-- Prénom -->
                 <div class="w-1/2">
                     <InputLabel for="first_name" value="First Name" />
 
@@ -60,15 +70,16 @@ const submitForm = () => {
                         type="text"
                         class="mt-1 block w-full"
                         v-model="form.first_name"
-                        :disabled="!isEditing"
+                        :disabled="!isEditing"               
                         :class="!isEditing ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : ''"
                         autofocus
                         autocomplete="first_name"
-                    />
+                    />     <!-- Désactive quand pas en édition -->
 
                     <InputError class="mt-2" :message="form.errors.first_name" />
                 </div>
 
+                <!-- Nom -->
                 <div class="w-1/2">
                     <InputLabel for="last_name" value="Last Name" />
 
@@ -86,8 +97,10 @@ const submitForm = () => {
                 </div>
             </div>
 
-            <!-- Phone Number and Address side by side -->
+            <!-- Ligne pour téléphone, adresse, et upload photo -->
             <div class="flex space-x-4">
+
+                <!-- Téléphone -->
                 <div class="w-1/3">
                     <InputLabel for="phone_number" value="Phone Number" />
 
@@ -104,6 +117,7 @@ const submitForm = () => {
                     <InputError class="mt-2" :message="form.errors.phone_number" />
                 </div>
 
+                <!-- Adresse -->
                 <div class="w-1/3">
                     <InputLabel for="address" value="Address" />
 
@@ -119,24 +133,32 @@ const submitForm = () => {
 
                     <InputError class="mt-2" :message="form.errors.address" />
                 </div>
-                    <div class="w-1/3">
-                        <InputLabel for="profile_picture" value="Profile Picture" />
-                        <input
-                            id="profile_picture"
-                            type="file"
-                            class="mt-1 block w-full"
-                            @change="event => form.profile_picture = event.target.files[0]"
-                            :disabled="!isEditing"
-                        />
-                        <InputError class="mt-2" :message="form.errors.profile_picture" />
+
+                <!-- Upload photo profil -->
+                <div class="w-1/3">
+                    <InputLabel for="profile_picture" value="Profile Picture" />
+
+                    <!-- input file pour sélectionner une image -->
+                    <input
+                        id="profile_picture"
+                        type="file"
+                        class="mt-1 block w-full"
+                        @change="event => form.profile_picture = event.target.files[0]" 
+                        :disabled="!isEditing"
+                    /> <!-- Mise à jour du fichier dans form -->
+
+                    <InputError class="mt-2" :message="form.errors.profile_picture" />
                 </div>
             </div>
 
+            <!-- Boutons -->
             <div class="flex items-center gap-4">
+                <!-- Bouton sauvegarder, désactivé si en traitement ou si pas en édition -->
                 <PrimaryButton :disabled="form.processing || !isEditing" type="submit">
                     Save
                 </PrimaryButton>
 
+                <!-- Bouton éditer, désactivé si déjà en édition ou en traitement -->
                 <PrimaryButton
                     type="button"
                     @click="enableEditing"
@@ -146,6 +168,7 @@ const submitForm = () => {
                     Edit
                 </PrimaryButton>
 
+                <!-- Message de succès après sauvegarde -->
                 <Transition
                     enter-active-class="transition ease-in-out"
                     enter-from-class="opacity-0"
@@ -165,3 +188,4 @@ const submitForm = () => {
         </form>
     </section>
 </template>
+

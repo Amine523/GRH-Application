@@ -22,6 +22,10 @@ import Slider from 'primevue/slider'
 import InputNumber from 'primevue/inputnumber'
 import Loading from 'vue-loading-overlay'
 import 'vue-loading-overlay/dist/css/index.css'
+import InputLabel from '@/Components/InputLabel.vue';
+import TextInput from '@/Components/TextInput.vue';
+import InputError from '@/Components/InputError.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
 
 export default {
     name: 'Index',
@@ -47,7 +51,11 @@ export default {
         DatePicker,
         Slider,
         InputNumber,
-        Loading
+        Loading,
+        InputLabel,
+        TextInput,
+        InputError,
+        SecondaryButton
     },
     provide: {
         schedule: [Day, Month, Agenda]
@@ -62,6 +70,18 @@ export default {
                 { label: 'Authorisation', value: 'authorisation' },
                 { label: 'Half Day', value: 'halfday' },
                 { label: 'Late Deduction', value: 'deduction' }
+            ],
+            // Jours fériés définis par mois et jour (sans année)
+            officialHolidays: [
+                { month: 0, day: 1, name: "Jour de l'An" },
+                { month: 2, day: 20, name: "Fête de l'Indépendance" },
+                { month: 3, day: 9, name: "Fête des Martyrs" }, 
+                { month: 4, day: 1, name: "Fête du Travail" }, 
+                { month: 6, day: 25, name: "Fête de la République" },
+                { month: 7, day: 13, name: "Fête de la Femme" }, 
+                { month: 9, day: 15, name: "Fête de l'Évacuation" }, 
+                { month: 11, day: 17, name: "Fête de la Révolution" }
+                
             ],
             sessionOptions: [
                 { label: 'Morning (08:00 - 12:00)', value: 'morning' },
@@ -95,9 +115,10 @@ export default {
             workDays: [1, 2, 3, 4, 5],
             views: ['Month', 'Day', 'Agenda'],
             selectedDate: new Date(),
-
-            // Dialog visibility states
-            activeDialog: null,  // 'refuse', etc.
+            activeDialog: null, 
+            showHistoryDialog: false,
+            showDialog: false,
+            showRefuseDialog: false,  
 
             // User and team data
             users: [],
@@ -106,62 +127,146 @@ export default {
             localLeaves: [],
 
             // Table filters
-            filters: {
-                global: { value: '', matchMode: 'contains' }
-            },
+           
+              /*  global: { value: '', matchMode: 'contains' }*/
+            // zedt7a 
+               filters: {
+            global: { value: null }
+        },
+        currentPage: 1,
+        perPage: 10,
 
             // Leave form data using Inertia's useForm()
             leaveForm: useForm({
                 type_of_leave: '',
-                authorisation_hour: '',
                 start_day: null,
                 start_time: new Date('1970-01-01T08:00:00'),
                 end_day: null,
-                halfday_session: 'morning',
-                authorisationHours: 0,
+                session: null,
+                authorisation_hour: 0,
+                reason: '',
                 team_user: null,
                 user_id: null,
-                deduction_days: null
+                deduction_days: null,
             }),
 
             // Leave action variables
             refusedLeave: null,
             refuseReason: null,
-
-            // Dialog visibility states (will be removed later)
-            showDialog: false,
-            showRefuseDialog: false,
-            processingLeaveRequest: false
+            processingLeaveRequest: false,
+            isAddHolidayDialogOpen: false,
+            holidayForm: useForm({
+                name: '',
+                start_date: '',
+                end_date: '',
+            }),
         }
     },
     props: {
         leaves: Array,
         user: Object,
+        holidays: Array
     },
     computed: {
+        // Add to computed properties
+isHolidayDate() {
+    return (date) => {
+        const [year, month, day] = date.split('-').map(Number);
+        const targetDate = new Date(year, month - 1, day);
+        return this.holidays.some(holiday => {
+            const startDate = new Date(holiday.start_date);
+            const endDate = new Date(holiday.end_date);
+            return targetDate >= startDate && targetDate <= endDate;
+        });
+    };
+},
+disabledHolidayDates() {
+    const disabledDates = [];
+    this.holidays.forEach(holiday => {
+        const start = new Date(holiday.start_date);
+        const end = new Date(holiday.end_date);
+        let current = new Date(start);
+
+        while (current <= end) {
+            disabledDates.push(new Date(current));
+            current.setDate(current.getDate() + 1);
+        }
+    });
+    return disabledDates;
+},
+disabledDates() {
+    const dates = [];
+    const currentYear = new Date().getFullYear();
+    
+    // Ajouter les jours fériés de la base de données
+    if (Array.isArray(this.holidays)) {
+        this.holidays.forEach(holiday => {
+            const start = new Date(holiday.start_date);
+            const end = new Date(holiday.end_date);
+            let current = new Date(start);
+            
+            while (current <= end) {
+                dates.push(new Date(current));
+                current.setDate(current.getDate() + 1);
+            }
+        });
+    }
+    
+    // Ajouter les jours fériés statiques
+    const officialHolidays = [
+        { month: 0, day: 1 },    // Jour de l'An
+        { month: 2, day: 20 },   // Fête de l'Indépendance
+        { month: 3, day: 9 },    // Fête des Martyrs
+        { month: 4, day: 1 },    // Fête du Travail
+        { month: 6, day: 25 },   // Fête de la République
+        { month: 7, day: 13 },   // Fête de la Femme
+        { month: 9, day: 15 },   // Fête de l'Évacuation
+        { month: 11, day: 17 }   // Fête de la Révolution
+    ];
+    
+    // Ajouter pour l'année en cours et la suivante
+    [currentYear, currentYear + 1].forEach(year => {
+        officialHolidays.forEach(holiday => {
+            const date = new Date(year, holiday.month, holiday.day);
+            // Vérifier si la date n'est pas déjà incluse
+            if (!dates.some(d => d.getTime() === date.getTime())) {
+                dates.push(date);
+            }
+        });
+    });
+    
+    return dates;
+},
         filteredLeaveTypes () {
             return this.leaveTypes.filter(type => type.value !== 'deduction' || this.isAdmin)
         },
         approvedLeaves () {
             const events = []
-
             this.users = this.$attrs.users
             this.mappedUsers = this.mapToOptions(this.users, ['profile.first_name', 'profile.last_name'], 'id')
-
+            // Ajouter les congés approuvés
             this.localLeaves
                 .filter(leave => leave.status_of_leave.toLowerCase() === 'approved')
                 .forEach(leave => {
-                    const user = this.users.find(u => u.id === leave.user_id)
-                    const userName = user ? `${user.profile.first_name.toUpperCase()} ${user.profile.last_name}` : 'Unknown User'
+                    const user = this.users?.find(u => u?.id === leave?.user_id) || null
+                    let userName = 'Unknown User'
+                    if (user?.profile?.first_name && user?.profile?.last_name) {
+                        userName = `${user.profile.first_name.toUpperCase()} ${user.profile.last_name}`
+                    } else if (user?.name) {
+                        userName = user.name
+                    }
                     const startDate = moment(leave.start_day, 'DD/MM/YYYY')
                     const endDate = moment(leave.end_day, 'DD/MM/YYYY')
-
                     let subject = userName
                     if (leave.type_of_leave === 'authorisation' && leave.start_time) {
-                        const hoursFormatted = Number.isInteger(leave.authorization_hour)
-                            ? `${leave.authorization_hour}h`
-                            : `${parseFloat(leave.authorization_hour).toFixed(1)}h`
-                        subject += ` - ${leave.start_time} | (${hoursFormatted})`
+                        const duration = parseFloat(leave.authorization_hour || 0);
+                        if (duration > 0) {
+                            const hoursFormatted = duration.toFixed(1) + 'h';
+                            const endTimeDisplay = leave.end_time || moment(leave.start_time, 'HH:mm')
+                                .add(duration, 'hours')
+                                .format('HH:mm');
+                            subject += ` | ${hoursFormatted} (${leave.start_time} - ${endTimeDisplay})`
+                        }
                     } else if (leave.type_of_leave === 'halfday') {
                         subject += ` - ${leave.start_time === '08:00' ? 'Morning' : 'Afternoon'}`
                     }
@@ -179,30 +284,165 @@ export default {
                     events.push(...segments)
                 })
 
-            return events
+            // Ajouter les jours fériés de la base de données
+            const currentYear = new Date().getFullYear();
+            const holidayEvents = [];
+            
+            // Process admin-added holidays
+            if (Array.isArray(this.holidays)) {
+                this.holidays.forEach(holiday => {
+                    const start = new Date(holiday.start_date);
+                    const end = new Date(holiday.end_date);
+                    let current = new Date(start);
+
+                    while (current <= end) {
+                        if (current.getFullYear() === currentYear || current.getFullYear() === currentYear + 1) {
+                            const formattedDate = moment(current).format('DD/MM/YYYY');
+                            holidayEvents.push({
+                                Id: `holiday-${holiday.id}-${current.toISOString().split('T')[0]}`,
+                                Subject: holiday.name,
+                                StartTime: new Date(current),
+                                EndTime: new Date(current),
+                                IsAllDay: true,
+                                CategoryColor: '#FF007F',
+                                Type: 'holiday',
+                                Status: 'official',
+                                CssClass: 'holiday-event',
+                                date: formattedDate,
+                                IsReadonly: true,
+                                Disabled: true
+                            });
+                        }
+                        current.setDate(current.getDate() + 1);
+                    }
+                });
+            }
+
+            // Add static official holidays
+            const officialHolidays = [
+                { month: 0, day: 1, name: "Jour de l'An" },
+                { month: 2, day: 20, name: "Fête de l'Indépendance" },
+                { month: 3, day: 9, name: "Fête des Martyrs" }, 
+                { month: 4, day: 1, name: "Fête du Travail" }, 
+                { month: 6, day: 25, name: "Fête de la République" },
+                { month: 7, day: 13, name: "Fête de la Femme" }, 
+                { month: 9, day: 15, name: "Fête de l'Évacuation" }, 
+                { month: 11, day: 17, name: "Fête de la Révolution" }
+            ];
+
+            officialHolidays.forEach(holiday => {
+                const yearsToShow = [currentYear, currentYear + 1];
+                yearsToShow.forEach(year => {
+                    const holidayDate = new Date(year, holiday.month, holiday.day);
+                    // Skip if this date is already covered by admin-added holidays
+                    const isAlreadyAdded = holidayEvents.some(h => 
+                        moment(h.StartTime).isSame(holidayDate, 'day')
+                    );
+                    
+                    if (!isAlreadyAdded) {
+                        const formattedDate = moment(holidayDate).format('DD/MM/YYYY');
+                        holidayEvents.push({
+                            Id: `official-holiday-${year}-${holiday.month}-${holiday.day}`,
+                            Subject: holiday.name,
+                            StartTime: new Date(holidayDate),
+                            EndTime: new Date(holidayDate),
+                            Type: 'holiday',
+                            Status: 'official',
+                            IsAllDay: true,
+                            CssClass: 'holiday-event',
+                            date: formattedDate,
+                            CategoryColor: '#FF007F',
+                            IsReadonly: true,
+                            Disabled: true
+                        });
+                    }
+                });
+            });
+
+            return [...events, ...holidayEvents];
         },
         mappedLeaves () {
             return this.leaves.map(leave => {
-                const user = this.users.find(user => user.id === leave.user_id) || { profile: {} }
-
-                return {
-                    id: leave.id,
-                    first_name: user.profile.first_name || 'Unknown',
-                    last_name: user.profile.last_name || 'User',
-                    start_day: leave.start_day,
-                    start_time: leave.start_time,
-                    end_day: leave.end_day,
-                    type_of_leave: leave.type_of_leave,
-                    status_of_leave: leave.status_of_leave,
-                    authorization_hour: leave.authorization_hour,
+                const user = this.users?.find(user => user?.id === leave?.user_id) || {};
+                const profile = user?.profile || {};
+                const firstName = profile?.first_name || 'Unknown';
+                const lastName = profile?.last_name || 'User';
+                
+                // Gestion des heures d'autorisation
+                let endTime = leave?.end_time;
+                let duration = 0;
+                
+                if (leave?.type_of_leave === 'authorisation' && leave?.start_time) {
+                    // Try to get duration from authorization_hour first
+                    if (leave.authorization_hour) {
+                        duration = parseFloat(leave.authorization_hour);
+                        const startTime = moment(leave.start_time, 'HH:mm');
+                        const endMoment = startTime.clone().add(duration, 'hours');
+                        endTime = endMoment.format('HH:mm');
+                    }
+                    // If we have both start and end time but no duration, calculate it
+                    else if (leave.end_time && leave.start_time) {
+                        const startTime = moment(leave.start_time, 'HH:mm');
+                        const endTimeMoment = moment(leave.end_time, 'HH:mm');
+                        duration = endTimeMoment.diff(startTime, 'hours', true);
+                        endTime = leave.end_time;
+                    }
                 }
-            })
+                
+                // Get team name by checking which team includes this user in employee_ids
+                let teamName = 'No Team';
+                
+                // Check if we have access to the teams data
+                if (this.$page.props.teams) {
+                    // Find the first team where this user is a member
+                    const userTeam = this.$page.props.teams.find(team => 
+                        team.employee_ids && team.employee_ids.includes(leave.user_id)
+                    );
+                    
+                    if (userTeam) {
+                        teamName = userTeam.team_name || 'No Team Name';
+                    }
+                }
+                
+                return {
+                    id: leave?.id,
+                    first_name: firstName,
+                    last_name: lastName,
+                    fullName: `${firstName} ${lastName}`,
+                    user_id: leave?.user_id,
+                    start_day: leave?.start_day,
+                    start_time: leave?.start_time,
+                    end_day: leave?.end_day,
+                    end_time: endTime,
+                    type_of_leave: leave?.type_of_leave,
+                    status_of_leave: leave?.status_of_leave,
+                    authorization_hours: parseFloat(duration || 0),
+                    team_name: teamName
+                };
+            });
         },
         isAdmin () {
             return this.page.props.auth.user_roles.includes('admin')
         },
         isProjectManager () {
             return this.page.props.auth.user_roles.includes('project_manager')
+        },
+        // user leave hISTORY
+        userLeaveHistory () {
+            const currentUserId = this.page.props.auth.user.id
+            const today = moment().startOf('day')
+            return this.mappedLeaves.filter(leave => {
+                const isUserLeave = leave.user_id === currentUserId
+                if (!isUserLeave) {
+                    return false
+                }
+                const leaveEndDateStr = leave.end_day || leave.start_day
+                if (!leaveEndDateStr) {
+                    return false
+                }
+                const leaveEndDate = moment(leaveEndDateStr, 'DD/MM/YYYY')
+                return leaveEndDate.isBefore(today)
+            })
         }
     },
     created () {
@@ -211,6 +451,62 @@ export default {
         this.mappedUsers = this.mapToOptions(this.users, ['profile.first_name', 'profile.last_name'], 'id')
     },
     methods: {
+        // code pour les vacances
+        getHolidayStyle(dateStr) {
+            if (!dateStr) return {};
+            // Formater la date pour la comparaison
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const isHoliday = this.officialHolidays.some(holiday => holiday.month === month - 1 && holiday.day === day);
+            if (isHoliday) {
+                return {
+                    color: '#d32f2f',
+                    fontWeight: 'bold',
+                    padding: '2px 5px',
+                    borderRadius: '4px',
+                    backgroundColor: 'rgba(255, 0, 0, 0.1)'
+                };
+            }
+            return {};
+        },
+    // pour afficher les vacances
+    onEventRender(args) {
+    // Handle all holiday events (both from database and static)
+    if (args.data.Type === 'holiday') {
+        args.element.style.backgroundColor = '#FF007F';
+        args.element.style.color = 'black';
+        args.element.style.fontWeight = 'bold';
+        args.element.style.border = '2px solid pink';
+        args.element.title = args.data.Subject;
+        args.element.style.width = '100%';
+        args.element.style.height = '100%';
+        
+        // Disable interaction
+        args.element.style.pointerEvents = 'none';
+        args.element.style.opacity = '0.8';
+        args.element.style.cursor = 'not-allowed';
+        
+        // Add emoji based on holiday type
+        const emoji = args.data.Status === 'official' ? '🎉' : '🎊';
+        
+        args.element.innerHTML = `
+            <div style="
+                font-size:1em;
+                color:black;
+                margin-top:4px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                gap:6px;
+                font-weight:bold;
+                pointer-events:none;
+                opacity:0.9;">
+                <span style="font-size:1.2em">${emoji}</span>
+                <span>${args.data.Subject}</span>
+            </div>`;
+        return;
+    }
+    // ... rest of the event rendering logic ...
+},
         customDateSort(event, field) {
             event.data.sort((a, b) => {
                 const dateA = this.parseDate(a[field]);
@@ -226,10 +522,8 @@ export default {
         },
         parseDate(dateStr) {
             if (!dateStr) return new Date(0);
-
             const parts = dateStr.split('/');
             if (parts.length !== 3) return new Date(0);
-
             const day = parts[0].padStart(2, '0');
             const month = parts[1].padStart(2, '0');
             const year = parts[2];
@@ -254,6 +548,16 @@ export default {
             this.leaveForm.post(route('leave.refuse'), {
                 preserveScroll: true,
                 onSuccess: this.refreshLeaves
+            })
+        },
+        // code pour moi
+ 
+    cancelLeave(leaveId) {
+        router.post(route('leave.cancel'), { id: leaveId }, {
+            preserveScroll: true,
+                onSuccess: () => {
+                    this.localLeaves = this.localLeaves.filter(leave => leave.id !== leaveId)
+                }
             })
         },
         refreshLeaves () {
@@ -290,12 +594,20 @@ export default {
             } else if (args.data.Status === 'pending') {
                 args.element.style.backgroundColor = 'orange'
             }
+            if (args.data.Type === 'holiday') {
+    args.element.style.backgroundColor='#FF007F'
+    args.element.title = args.data.Subject;
+  }
+
         },
         getNestedValue (item, field) {
             return field.split('.').reduce((obj, key) => obj && obj[key], item)
         },
         openDialog () {
             this.showDialog = true
+        },
+        openHistoryDialog () { 
+            this.showHistoryDialog = true
         },
         openRefuseDialog (id) {
             this.refusedLeave = id
@@ -304,6 +616,7 @@ export default {
         closeDialog () {
             this.showDialog = false
             this.showRefuseDialog = false
+            this.showHistoryDialog = false
         },
         getStartTime () {
             switch (this.leaveForm.type_of_leave) {
@@ -313,7 +626,7 @@ export default {
                     return this.leaveForm.start_time
             }
         },
-        submitLeaveRequest () {
+        submitLeaveRequest() {
             this.processingLeaveRequest = true
             if (this.leaveForm.type_of_leave === 'deduction') {
                 this.leaveForm.start_day = moment().format('YYYY-MM-DD')
@@ -328,11 +641,27 @@ export default {
                 : this.page.props.auth.user.id
 
             this.leaveForm.start_time = this.getStartTime()
-            this.leaveForm.authorisationHours = this.leaveForm.type_of_leave === 'authorisation'
-                ? Number(this.leaveForm.authorisationHours) || 0
-                : null
-
-            router.visit(route('leave.store'), {
+            
+                // S'assurer que les heures d'autorisation sont correctement envoyées
+            if (this.leaveForm.type_of_leave === 'authorisation') {
+                // Ensure we have a valid number for authorization hours
+                const duration = parseFloat(this.leaveForm.authorisation_hour || 0);
+                if (isNaN(duration) || duration < 0.5 || duration > 2.0) {
+                    return;
+                }
+                
+                // Set the authorization_hour field correctly
+                this.leaveForm.authorization_hour = duration;
+                
+                if (this.leaveForm.start_time) {
+                    const startTime = moment(this.leaveForm.start_time, 'HH:mm');
+                    const endTime = startTime.clone().add(duration, 'hours');
+                    this.leaveForm.end_time = endTime.format('HH:mm');
+                }
+            } else {
+                this.leaveForm.authorization_hour = null;
+                this.leaveForm.end_time = null;
+            }            router.visit(route('leaves.store'), {
                 method: 'POST',
                 only: ['leaves'],
                 data: this.leaveForm.data(),
@@ -348,40 +677,83 @@ export default {
                 }
             })
         },
-        splitLeaveExcludeWeekends (startDate, endDate, baseEvent) {
-            const chunks = []
-            let current = moment(startDate)
-            let chunkStart = null
-
-            while (current <= endDate) {
-                const isWeekday = current.isoWeekday() <= 5
-
-                if (isWeekday) {
-                    if (!chunkStart) chunkStart = current.clone()
-                } else {
-                    if (chunkStart) {
-                        chunks.push({
-                            ...baseEvent,
-                            StartTime: chunkStart.format('YYYY-MM-DD'),
-                            EndTime: current.clone().format('YYYY-MM-DD')
-                        })
-                        chunkStart = null
-                    }
-                }
-
-                current.add(1, 'day')
-            }
-
-            if (chunkStart && chunkStart.isSameOrBefore(endDate)) {
-                chunks.push({
-                    ...baseEvent,
-                    StartTime: chunkStart.format('YYYY-MM-DD'),
-                    EndTime: endDate.add(1,'day').format('YYYY-MM-DD')
-                })
-            }
-
-            return chunks
+        splitLeaveExcludeWeekends(startDate, endDate, baseEvent) {
+    const events = [];
+    let currentDate = new Date(startDate);
+    const end = new Date(endDate);
+    while (currentDate <= end) {
+        // Ne pas ajouter d'événement pour les week-ends et jours fériés
+        if (!this.isWeekendOrHoliday(currentDate)) {
+            const eventDate = new Date(currentDate);
+            const formattedDate = moment(eventDate).format('DD/MM/YYYY');
+            events.push({
+                ...baseEvent,
+                StartTime: eventDate,
+                EndTime: eventDate,
+                date: formattedDate
+            });
         }
+        
+        //passer au jour suivant
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return events;
+},
+
+        isWeekend(date) {
+            const dayOfWeek = date.getDay();
+            return dayOfWeek === 0 || dayOfWeek === 6;
+        },
+
+        isHoliday(date) {
+            if (!this.holidays || !this.holidays.length) return false;
+
+            return this.holidays.some(holiday => {
+                const startDate = new Date(holiday.start_date);
+                const endDate = new Date(holiday.end_date);
+                const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate()); // Remove time part
+
+                return checkDate >= startDate && checkDate <= endDate;
+            });
+        },
+
+        isWeekendOrHoliday(date) {
+            return this.isWeekend(date) || this.isHoliday(date);
+        },
+        openAddHolidayDialog() {
+            this.isAddHolidayDialogOpen = true;
+        },
+        closeModal() {
+            this.isAddHolidayDialogOpen = false;
+            this.holidayForm.reset();
+        },
+        submitHoliday() {
+            this.holidayForm.post(route('holidays.store'), {
+                onSuccess: () => this.closeModal(),
+            });
+        },
+        // Méthode appelée lors du clic sur une cellule du calendrier
+        onCellClick(args) {
+            // Vérifier si la date cliquée est un jour férié
+            const clickedDate = args.startTime;
+            const isHoliday = this.holidays.some(holiday => {
+                const start = new Date(holiday.start_date);
+                const end = new Date(holiday.end_date);
+                return clickedDate >= start && clickedDate <= end;
+            });
+
+            // Si c'est un jour férié, annuler l'action par défaut
+            if (isHoliday) {
+                args.cancel = true;
+                return;
+            }
+        },
+        resetPagination() {
+            if (this.$refs.dt) {
+                this.$refs.dt.first = 0; // Reset to first page
+            }
+        },
     },
     watch: {
         approvedLeaves: {
@@ -421,25 +793,37 @@ export default {
                             <div class="manuel-item flex gap-2 items-center"><span
                                 class="is-square is-red-square"></span> Deduction
                             </div>
+                            <div class="manuel-item flex gap-2 items-center"><span
+                                class="is-square is-pink-square"></span> Holidays
+                            </div>
                         </div>
+                        <PrimaryButton @click="openHistoryDialog" class="bg-yellow-400 text-white">
+                            Leave History
+                        </PrimaryButton>
+                        <PrimaryButton v-if="isAdmin" @click="openAddHolidayDialog" class="bg-orange-600 text-white">
+                            Add Holiday
+                        </PrimaryButton>
                         <PrimaryButton @click="openDialog" class="bg-green-600 text-white">
                             Add Leave Request
                         </PrimaryButton>
+                      
                     </div>
                     <ejs-schedule
                         :event-settings="eventSettings"
                         :views="views"
                         :selected-date="selectedDate"
                         height="750px"
-                        :eventRendered="onEventRender"
-                        :firstDayOfWeek="1"
+                        :event-rendered="onEventRender"
+                        :first-day-of-week="1"
+                        :cell-click="onCellClick"
+                        ref="schedule"
                     ></ejs-schedule>
                 </div>
             </div>
             <div class="mx-auto space-y-6 sm:px-6 lg:px-8 py-5">
                 <div class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
                     <div class="mt-6">
-                        <h3 class="text-lg font-bold mb-4">Leave Requests</h3>
+                        <h3 class="text-lg font-bold mb-4">Leave Requests </h3>
                         <DataTable
                             ref="dt"
                             :value="mappedLeaves"
@@ -451,31 +835,84 @@ export default {
                             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                             :rowsPerPageOptions="[5, 10, 25]"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} leaves"
-                        >
-                            <template #header>
+                            :globalFilterFields="['first_name', 'last_name', 'fullName', 'type_of_leave']"
+                          >
+                            <!-- full name --> 
+    
+                        <template #header>
+    <div class="flex justify-content-end">
+        <span class="p-input-icon-left">
+            <i class="pi pi-search" />
+            <InputText 
+                v-model="filters['global'].value" 
+                placeholder="Search by last name or leave type"
+                @input="resetPagination"
+            />
+        </span>
+    </div>
+</template>
+                           <!-- <template #header>
                                 <div class="flex justify-content-end">
             <span class="p-input-icon-left">
                 <InputText v-model="filters['global'].value" placeholder="Search for Leaves"/>
             </span>
                                 </div>
-                            </template>
+                            </template> -->
 
                             <template #empty>
                                 <h4>No leaves found</h4>
                             </template>
 
-                            <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
+                             <!-- <Column selectionMode="multiple" headerStyle="width: 3rem"></Column> -->
                             <Column field="first_name" header="First Name" :sortable="true"/>
                             <Column field="last_name" header="Last Name" :sortable="true"/>
                             <Column field="start_day" header="Start Day" :sortable="true"
+    :sort-field="(row) => this.parseDate(row.start_day).getTime()"
+    :sort-function="(event) => this.customDateSort(event, 'start_day')">
+    <template #body="slotProps">
+        <span :style="getHolidayStyle(slotProps.data.start_day)">
+            {{ slotProps.data.start_day }}
+        </span>
+    </template>
+</Column>
+<Column field="end_day" header="End Day" :sortable="true"
+    :sort-field="(row) => this.parseDate(row.end_day).getTime()"
+    :sort-function="(event) => this.customDateSort(event, 'end_day')">
+    <template #body="slotProps">
+        <span :style="getHolidayStyle(slotProps.data.end_day)">
+            {{ slotProps.data.end_day }}
+        </span>
+    </template>
+</Column>
+
+                            <!-- <Column field="start_day" header="Start Day" :sortable="true"
                                      :sort-field="(row) => this.parseDate(row.start_day).getTime()"
                                      :sort-function="(event) => this.customDateSort(event, 'start_day')">
                             </Column>
                             <Column field="end_day" header="End Day" :sortable="true"
                                     :sort-field="(row) => this.parseDate(row.end_day).getTime()"
                                     :sort-function="(event) => this.customDateSort(event, 'end_day')">
-                            </Column>
+                            </Column> -->
                             <Column field="type_of_leave" header="Type of Leave" :sortable="true"/>
+                            <Column v-if="isProjectManager" field="team_name" header="Team" :sortable="true">
+                                <template #body="{ data }">
+                                    {{ data.team_name }}
+                                </template>
+                            </Column>
+                            <Column field="authorization_hours" header="Authorisation Hours" :sortable="true">
+                                <template #body="slotProps">
+                                    <span v-if="slotProps.data.type_of_leave === 'authorisation'" 
+                                          :class="[
+                                              'px-3 py-1 rounded-full',
+                                              slotProps.data.authorization_hours > 0 ? 'bg-blue-100' : 'bg-gray-100'
+                                          ]">
+                                        {{ parseFloat(slotProps.data.authorization_hours || 0).toFixed(1) }}h
+                                        <span class="text-gray-600 ml-1" v-if="slotProps.data.start_time && slotProps.data.end_time">
+                                            ({{ slotProps.data.start_time }} - {{ slotProps.data.end_time }})
+                                        </span>
+                                    </span>
+                                </template>
+                            </Column>
                             <Column bodyClass="text-center" field="status_of_leave" header="Status of Leave"
                                     :sortable="true">
                                 <template #body="slotProps">
@@ -487,35 +924,77 @@ export default {
                                 </template>
                             </Column>
 
-                            <Column field="action" header="Action" bodyClass="text-center"
-                                    v-if="isProjectManager || isAdmin">
-                                <template #body="slotProps">
-                                    <template v-if="slotProps.data.status_of_leave === 'pending'">
-                                        <PrimaryButton @click="approveLeave(slotProps.data.id)"
-                                                       class="bg-blue-600 text-white mr-2">
-                                            Approve
-                                        </PrimaryButton>
-                                        <PrimaryButton @click="openRefuseDialog(slotProps.data.id)"
-                                                       class="bg-red-600 text-white mr-2">
-                                            Reject
-                                        </PrimaryButton>
-                                    </template>
-                                    <PrimaryButton @click="deleteLeave(slotProps.data.id)"
-                                                   class="bg-gray-600 text-white mr-2">
-                                        Remove
-                                    </PrimaryButton>
-                                </template>
-                            </Column>
-                        </DataTable>
+                           <Column field="action" header="Action" bodyClass="text-center" :sortable="true">
+    <template #body="slotProps">
+        <!-- Si pending -->
+        <template v-if="slotProps.data.status_of_leave === 'pending'">
+            <!-- Admin/PM peut approuver ou refuser -->
+            <template v-if="isAdmin || isProjectManager">
+                <PrimaryButton @click="approveLeave(slotProps.data.id)"
+                               class="bg-blue-600 text-white">
+                    Approve
+                </PrimaryButton>
+                <PrimaryButton @click="openRefuseDialog(slotProps.data.id)"
+                               class="bg-red-600 text-white">
+                    Reject
+                </PrimaryButton>
+            </template>
+
+            <PrimaryButton
+  v-if="slotProps.data.user_id === page.props.auth.user.id"
+  @click="cancelLeave(slotProps.data.id)"
+  class="bg-pink-600 text-white mr-2"
+>
+  <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+  </svg>
+  Cancel
+</PrimaryButton>
+        </template>
+        <!-- Bouton Remove toujours visible pour admin/pm -->
+        <PrimaryButton v-if="isAdmin || isProjectManager"
+                       @click="deleteLeave(slotProps.data.id)"
+                       class="bg-gray-600 text-white mr-2">
+            Remove
+        </PrimaryButton>
+    </template>
+</Column>
+</DataTable>
                     </div>
                 </div>
             </div>
         </div>
         <Dialog
+            v-model:visible="showHistoryDialog"
+            :closable="true"
+            :modal="true"
+            header="My Leave History"
+            class="rounded-lg shadow-lg p-5 bg-white w-[95%] sm:w-[80%] md:w-[70%] lg:w-[60%] max-w-4xl mx-auto"
+        >
+            <DataTable :value="userLeaveHistory" :rows="5" :paginator="true" responsiveLayout="scroll">
+                <Column field="start_day" header="Start Day" :sortable="true"></Column>
+                <Column field="end_day" header="End Day" :sortable="true"></Column>
+                <Column field="type_of_leave" header="Type" :sortable="true"></Column>
+                <Column field="authorization_hours" header="Authorisation Hours" :sortable="true">
+                    <template #body="slotProps">
+                        <span v-if="slotProps.data.type_of_leave === 'authorisation'">
+                            {{ parseFloat(slotProps.data.authorization_hours).toFixed(2) }}h ({{ slotProps.data.start_time }} - {{ slotProps.data.end_time }})
+                        </span>
+                    </template>
+                </Column>
+                <Column field="status_of_leave" header="Status" :sortable="true">
+                    <template #body="slotProps">
+                        <Tag v-if="slotProps.data.status_of_leave === 'approved'" severity="success" value="Approved"/>
+                        <Tag v-else-if="slotProps.data.status_of_leave === 'pending'" severity="warn" value="Pending"/>
+                        <Tag v-else severity="danger" value="Refused"/>
+                    </template>
+                </Column>
+            </DataTable>
+        </Dialog>
+        <Dialog
             v-model:visible="showDialog"
             :closable="true"
             :modal="true"
-            :dismissable-mask="true"
             header="Leave Request"
             @close="closeDialog"
             class="rounded-lg shadow-lg p-5 bg-white w-[95%] sm:w-[80%] md:w-[60%] lg:w-[50%] max-w-3xl mx-auto"
@@ -536,7 +1015,7 @@ export default {
                     </div>
                 </section>
 
-                <section v-if="isAdmin || isProjectManager">
+                <section v-if="isAdmin ">
                     <label class="font-medium">Select User:</label>
                     <Select
                         v-model="leaveForm.team_user"
@@ -545,7 +1024,6 @@ export default {
                         optionLabel="label"
                         optionValue="value"
                         placeholder="Choose a user"
-
                         class="w-full border rounded-lg p-2"
                     />
                 </section>
@@ -560,21 +1038,27 @@ export default {
                     </label>
                     <DatePicker
                         v-model="leaveForm.start_day"
-                        dateFormat="dd-MM-yy"
+                        dateFormat="dd-mm-yy"
                         :disabled-days="[0,6]"
+                        :disabled-dates="disabledDates" 
                         class="w-full rounded-lg p-2"
                         placeholder="Select date"
+                        :minDate="new Date()"
+                        showIcon
                     />
 
                     <div v-if="leaveForm.type_of_leave !== 'authorisation' && leaveForm.type_of_leave !== 'halfday'">
                         <label class="font-medium">End Date:</label>
                         <DatePicker
                             v-model="leaveForm.end_day"
-                            dateFormat="dd-MM-yy"
+                            dateFormat="dd-mm-yy"
                             :disabled-days="[0,6]"
+                       :disabled-dates="disabledDates" 
                             class="w-full rounded-lg p-2"
                             :disabled="leaveForm.type_of_leave === 'halfday' || leaveForm.type_of_leave === 'authorisation'"
                             placeholder="Select end date"
+                            :minDate="leaveForm.start_day || new Date()"
+                            showIcon
                         />
                     </div>
                 </section>
@@ -582,13 +1066,15 @@ export default {
                 <section v-if="leaveForm.type_of_leave === 'halfday'">
                     <label class="font-medium">Session:</label>
                     <Select
-                        v-model="leaveForm.halfday_session"
+                        v-model="leaveForm.session"
                         :options="sessionOptions"
                         optionLabel="label"
                         optionValue="value"
                         placeholder="Choose session"
                         class="w-full border rounded-lg p-2"
+                        required
                     />
+                    <InputError class="mt-2" :message="leaveForm.errors.session" />
                 </section>
 
                 <template v-if="leaveForm.type_of_leave === 'authorisation'">
@@ -608,11 +1094,12 @@ export default {
                         <label class="font-medium">Authorisation Hours (0.5 - 2h per Month):</label>
                         <div class="grid grid-cols-4 gap-2">
                             <button
+                            
                                 v-for="hour in [0.5, 1, 1.5, 2]"
                                 :key="hour"
-                                @click="leaveForm.authorisationHours = hour"
+                                @click="leaveForm.authorisation_hour = hour"
                                 class="w-full text-center py-2 rounded-lg border hover:bg-gray-100"
-                                :class="{'bg-blue-500 text-white': leaveForm.authorisationHours === hour}"
+                                :class="{'bg-blue-500 text-white': leaveForm.authorisation_hour === hour}"
                             >
                                 {{ hour }}h
                             </button>
@@ -680,6 +1167,68 @@ export default {
                 </div>
             </div>
         </Dialog>
+        <Dialog
+            v-model:visible="isAddHolidayDialogOpen"
+            :closable="true"
+            :modal="true"
+            header="Add New Holiday"
+            class="rounded-lg shadow-lg p-5 bg-white w-[95%] sm:w-[80%] md:w-[60%] lg:w-[50%] max-w-3xl mx-auto"
+        >
+                <form @submit.prevent="submitHoliday" class="mt-6">
+                    <div>
+                        <InputLabel for="name" value="Holiday Name" />
+
+                        <TextInput
+                            id="name"
+                            type="text"
+                            class="mt-1 block w-full"
+                            v-model="holidayForm.name"
+                            required
+                            autofocus
+                        />
+
+                        <InputError class="mt-2" :message="holidayForm.errors.name" />
+                    </div>
+                    <div class="mt-4">
+                        <InputLabel for="Start Day" value="Start Day" />
+
+                        <TextInput
+                            id="Start Day"
+                            type="date"
+                            class="mt-1 block w-full"
+                            v-model="holidayForm.start_date"
+                            required
+                        />
+                       
+                        <InputError class="mt-2" :message="holidayForm.errors.start_date" />
+                    </div>
+                    <div class="mt-4">
+                        <InputLabel for="End Day" value="End Day" />
+
+                        <TextInput
+                            id="End Day"
+                            type="date"
+                            class="mt-1 block w-full"
+                            v-model="holidayForm.end_date"
+                            required
+                        />
+
+                        <InputError class="mt-2" :message="holidayForm.errors.end_date" />
+                    </div>
+                    <div class="mt-6 flex justify-end">
+                        <SecondaryButton @click="closeModal"> Cancel </SecondaryButton>
+
+                        <PrimaryButton
+                            class="ml-3"
+                            :class="{ 'opacity-25': holidayForm.processing }"
+                            :disabled="holidayForm.processing"
+                        >
+                            Save Holiday
+                        </PrimaryButton>
+                    </div>
+                </form>
+          
+        </Dialog>
         <loading v-model:active="processingLeaveRequest"
                  :can-cancel="false"
                  :is-full-page="true"/>
@@ -690,4 +1239,141 @@ export default {
     background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(5px);
 }
+</style>
+<style scoped>
+/* Styles pour les indicateurs de type de congé */
+.manuel-item {
+    white-space: nowrap;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.manuel-item:hover {
+    background-color: #f3f4f6;
+}
+
+/* Amélioration de la table */
+:deep(.p-datatable) {
+    font-size: 0.875rem;
+}
+
+:deep(.p-datatable thead th) {
+    background-color: #f9fafb;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    color: #4b5563;
+}
+
+/* Style pour les boutons d'action */
+.action-btn {
+    margin: 0 0.25rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s;
+}
+
+/* Style pour le calendrier */
+:deep(.e-schedule) {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Style pour les cartes de congé */
+.conges-card {
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.conges-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0,0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Style pour les badges d'état */
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+/* Amélioration de la réactivité */
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .manuel-item {
+        padding: 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    :deep(.p-datatable) {
+        font-size: 0.8125rem;
+    }
+}
+
+/* Style pour les champs de formulaire */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #374151;
+}
+
+/* Style pour les boutons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+/* .btn-primary {
+    background-color: #3b82f6;
+    color: white;
+    border: 1px solid #3b82f6;
+} */
+
+.btn-primary:hover {
+    background-color: #2563eb;
+    border-color: #2563eb;
+}
+
+.btn-secondary {
+    background-color: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.btn-secondary:hover {
+    background-color: #e5e7eb;
+}
+
+/* Style pour les messages d'erreur */
+.error-message {
+    color: #ef4444;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+
 </style>

@@ -46,6 +46,14 @@ class User extends Authenticated
         return $this->belongsTo(Team::class);
     }
 
+    // Many-to-many relationship with teams
+    public function teams()
+    {
+        return $this->belongsToMany(Team::class, 'team_user', 'user_id', 'team_id')
+            ->withPivot('is_project_manager')
+            ->withTimestamps();
+    }
+
     public function leaves()
     {
         return $this->hasMany(Leave::class);
@@ -71,4 +79,25 @@ class User extends Authenticated
             get: fn() => $this->profile ? "{$this->profile->first_name} {$this->profile->last_name}" : null,
         );
     }
+ 
 }
+
+//     public function teams(){
+//         return $this->belongsToMany(Team::class);
+//     }
+// public function managedTeams() {
+//     return $this->hasMany(Team::class,'project_manager_id');
+// }
+// public function isProjectManager():bool{
+//     return $this->hasRole('project manager');
+// }
+// public function leaveRequests(){
+//     return $this->hasMany(leaveRequests::class);
+// }
+
+// protected function fullName(): Attribute
+// {
+//     return Attribute::make(
+//         get: fn() => $this->profile ? "{$this->profile->first_name} {$this->profile->last_name}" : null,
+//     );
+// }

@@ -42,4 +42,7 @@ span.is-red-square {
 .e-schedule .e-month-view .e-appointment .e-appointment-details .e-time {
     display: none;
 }
+span.is-pink-square {
+    background-color:#FF007F;
+}
 
