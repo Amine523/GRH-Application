@@ -15,6 +15,10 @@ class Team extends Model
         'employee_ids'
     ];
     
+    protected $casts = [
+        'employee_ids' => 'array',
+    ];
+    
     // Map 'name' to 'team_name' for backward compatibility
     public function getNameAttribute()
     {
@@ -26,32 +30,49 @@ class Team extends Model
         $this->attributes['team_name'] = $value;
     }
 
-    protected $casts = [
-        'employee_ids' => 'array',
-    ];
-
-
     public function projectManager()
     {
         return $this->belongsTo(User::class, 'project_manager_id');
     }
 
-    public function employees()
-    {
-        return $this->belongsToMany(User::class, 'team_user', 'team_id', 'user_id')
-            ->withTimestamps()
-            ->withPivot('is_project_manager')
-            ->using(TeamUser::class);
-    }
+    /**
+     * The users that belong to the team.
+     */
     public function users()
     {
-        return $this->hasMany(User::class);
+        $userIds = is_array($this->employee_ids) ? $this->employee_ids : [];
+        return User::whereIn('id', $userIds);
+    }
+    
+    /**
+     * Alias for backward compatibility
+     */
+    public function members()
+    {
+        return $this->users();
+    }
+    
+    /**
+     * Alias pour la rétrocompatibilité
+     */
+    public function employees()
+    {
+        return $this->members();
     }
 
-
-    // Get employees with their profiles
-    public function employeesWithProfiles()
+    /**
+     * Récupère les membres avec leurs profils
+     */
+    public function membersWithProfiles()
     {
-        return $this->employees()->with('profile');
+        return $this->members()->load('profile');
+    }
+    
+    /**
+     * Vérifie si un utilisateur est membre de l'équipe
+     */
+    public function hasMember(User $user): bool
+    {
+        return in_array($user->id, $this->employee_ids ?? []);
     }
 }

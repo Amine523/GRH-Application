@@ -8,7 +8,6 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\DB;
 
 class TeamController extends Controller
 {
@@ -184,14 +183,30 @@ class TeamController extends Controller
         $team->employee_ids = $updatedEmployeeIds;
 
         if ($team->save()) {
-            return back()->with('success', 
-                count($newMemberIds) > 1 
-                    ? 'Members added successfully' 
-                    : 'Member added successfully'
-            );
+            $message = count($newMemberIds) > 1 
+                ? 'Members added successfully' 
+                : 'Member added successfully';
+                
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'message' => $message,
+                    'status' => 'success'
+                ]);
+            }
+            
+            return back()->with('success', $message);
         }
 
-        return back()->with('error', 'Failed to save team members');
+        $error = 'Failed to save team members';
+        
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => $error,
+                'status' => 'error'
+            ], 500);
+        }
+        
+        return back()->with('error', $error);
     }
 
     public function removeMember(Team $team, User $user)

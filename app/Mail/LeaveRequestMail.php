@@ -48,6 +48,18 @@ class LeaveRequestMail extends Mailable
                 $this->content = "<p>Votre demande de <strong>$leaveTypeLabel</strong> a été refusée pour la raison suivante :
                                   <strong>" . ($this->leave?->leaveReason ?? 'Non spécifiée') . "</strong>.</p>";
                 break;
+                
+            case 'pm-notification':
+                $this->subject = "Nouvelle demande de $leaveTypeLabel - {$this->fullName}";
+                $this->content = "<p>Une nouvelle demande de <strong>$leaveTypeLabel</strong> a été soumise par <strong>{$this->fullName}</strong>.</p>
+                                <p>Détails de la demande :</p>
+                                <ul>
+                                    <li>Type : $leaveTypeLabel</li>
+                                    <li>Date de début : {$this->leave?->start_day}</li>
+                                    <li>Date de fin : {$this->leave?->end_day}</li>
+                                    " . ($this->leave?->type_of_leave === 'authorisation' ? "<li>Heures : {$this->leave?->authorization_hour}h</li>" : "") . "
+                                </ul>";
+                break;
 
             case 'admin-pending-approval':
                 $recipientName = $this->recipientName ?? 'Administrateur';

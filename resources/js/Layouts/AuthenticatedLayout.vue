@@ -57,6 +57,11 @@ const showingNavigationDropdown = ref(false);
                                     Teams
                                 </NavLink>
                                 <NavLink
+                                    :href="route('projects.index')"
+                                    :active="route().current('projects.index')">
+                                    Projects
+                                </NavLink>
+                                <NavLink
                                     :href="route('leaves.index')"
                                     :active="route().current('leaves.index')">
                                     Leave Request
@@ -180,6 +185,12 @@ const showingNavigationDropdown = ref(false);
                             :href="route('teams.index')"
                             :active="route().current('teams.index')">
                             Teams
+                        </ResponsiveNavLink>
+                                <ResponsiveNavLink
+                            :href="route('projects.index')"
+                            :active="route().current('projects.index')"
+                        >
+                            Projects
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             :href="route('leaves.index')"

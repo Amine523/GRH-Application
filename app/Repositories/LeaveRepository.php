@@ -16,18 +16,23 @@ class LeaveRepository
      * @param $data
      * @return void
      */
-    public function createLeave($data, $startDay, $endDate, $startTime): Leave
+    public function createLeave($data, $startDay, $endDate, $startTime, $endTime = null): Leave
     {
-
-        return Leave::create([
+        $leaveData = [
             'user_id' => $data->user_id,
             'type_of_leave' => $data->type_of_leave,
             'start_day' => $startDay->format('Y/m/d'),
             'start_time' => $startTime,
             'end_day' => $endDate->format('Y/m/d'),
             'status_of_leave' => 'pending',
-            'authorization_hour' => $data->type_of_leave === 'authorisation' ? (float)$data->authorisation_hour : null,
-        ]);
+        ];
+
+        if ($data->type_of_leave === 'authorisation') {
+            $leaveData['authorization_hour'] = (float)$data->authorization_hour;
+            $leaveData['end_time'] = $endTime;
+        }
+
+        return Leave::create($leaveData);
     }
 
     /**

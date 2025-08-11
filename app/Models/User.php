@@ -41,17 +41,43 @@ class User extends Authenticated
         return $this->hasOne(Profile::class);
     }
 
+    /**
+     * Get the primary team this user belongs to based on team_id
+     */
     public function team()
     {
-        return $this->belongsTo(Team::class);
+        return $this->belongsTo(Team::class, 'team_id');
     }
 
-    // Many-to-many relationship with teams
+    /**
+     * Get all teams where the user is a project manager
+     */
+    public function managedTeams()
+    {
+        if (!$this->isProjectManager()) {
+            return collect();
+        }
+        
+        return Team::where('project_manager_id', $this->id)->get();
+    }
+
+    /**
+     * Get all teams this user belongs to (including managed teams and teams they're a member of)
+     */
     public function teams()
     {
-        return $this->belongsToMany(Team::class, 'team_user', 'user_id', 'team_id')
-            ->withPivot('is_project_manager')
-            ->withTimestamps();
+        return Team::where('project_manager_id', $this->id)
+            ->orWhereJsonContains('employee_ids', (string)$this->id)
+            ->orWhereJsonContains('employee_ids', $this->id)
+            ->get();
+    }
+
+    /**
+     * Check if the user is a project manager of any team
+     */
+    public function isProjectManager(): bool
+    {
+        return $this->hasRole('project_manager');
     }
 
     public function leaves()

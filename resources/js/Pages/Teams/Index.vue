@@ -109,14 +109,14 @@
                                 :key="team.id" 
                                 class="border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow transition"
                             >
-                                <!-- <h4 class="text-md font-semibold text-gray-800 mb-1">{{ team.team_name }}</h4>
+                                <h4 class="text-md font-semibold text-gray-800 mb-1">{{ team.team_name }}</h4>
                                 <p class="text-sm text-gray-500 mb-2">
                                     Project Manager: 
                                     <span class="text-gray-700 font-medium">
-                                        {{ team.project_manager?.profile?.full_name ?? 'N/A' }}
+                                        {{ team.project_manager?.profile?.first_name }} {{ team.project_manager?.profile?.last_name }}
                                     </span>
                                 </p>
-                                <p class="text-sm text-gray-500 mb-3">
+                                <!-- <p class="text-sm text-gray-500 mb-3">
                                     Members: {{ team.employees_count }}
                                 </p> -->
                                 <Link 

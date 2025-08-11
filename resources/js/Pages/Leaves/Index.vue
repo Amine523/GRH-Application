@@ -6,6 +6,7 @@ import { ScheduleComponent, Day, Month, Agenda } from '@syncfusion/ej2-vue-sched
 import { DropDownListComponent } from '@syncfusion/ej2-vue-dropdowns'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'
+import { useToast } from 'vue-toastification'
 import Dialog from 'primevue/dialog'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import DataTable from 'primevue/datatable'
@@ -60,10 +61,13 @@ export default {
     provide: {
         schedule: [Day, Month, Agenda]
     },
-    data () {
+    data() {
+        const toast = useToast();
         return {
             page: usePage(),
+            toast,
             selectedLeaves: [],
+            overlapWarning: null,
             leaveTypes: [
                 { label: 'Vacation', value: 'vacation' },
                 { label: 'Sick', value: 'sick' },
@@ -626,58 +630,7 @@ disabledDates() {
                     return this.leaveForm.start_time
             }
         },
-        submitLeaveRequest() {
-            this.processingLeaveRequest = true
-            if (this.leaveForm.type_of_leave === 'deduction') {
-                this.leaveForm.start_day = moment().format('YYYY-MM-DD')
-            }
-
-            if (this.leaveForm.type_of_leave === 'halfday' || this.leaveForm.type_of_leave === 'authorisation') {
-                this.leaveForm.end_day = this.leaveForm.start_day
-            }
-
-            this.leaveForm.user_id = this.leaveForm.team_user
-                ? this.leaveForm.team_user
-                : this.page.props.auth.user.id
-
-            this.leaveForm.start_time = this.getStartTime()
-            
-                // S'assurer que les heures d'autorisation sont correctement envoyées
-            if (this.leaveForm.type_of_leave === 'authorisation') {
-                // Ensure we have a valid number for authorization hours
-                const duration = parseFloat(this.leaveForm.authorisation_hour || 0);
-                if (isNaN(duration) || duration < 0.5 || duration > 2.0) {
-                    return;
-                }
-                
-                // Set the authorization_hour field correctly
-                this.leaveForm.authorization_hour = duration;
-                
-                if (this.leaveForm.start_time) {
-                    const startTime = moment(this.leaveForm.start_time, 'HH:mm');
-                    const endTime = startTime.clone().add(duration, 'hours');
-                    this.leaveForm.end_time = endTime.format('HH:mm');
-                }
-            } else {
-                this.leaveForm.authorization_hour = null;
-                this.leaveForm.end_time = null;
-            }            router.visit(route('leaves.store'), {
-                method: 'POST',
-                only: ['leaves'],
-                data: this.leaveForm.data(),
-                preserveScroll: true,
-                preserveState: true,
-                onSuccess: () => {
-                    this.processingLeaveRequest = false
-                    this.closeDialog()
-                    this.localLeaves = this.leaves
-                },
-                onError: () => {
-                    this.processingLeaveRequest = false
-                }
-            })
-        },
-        splitLeaveExcludeWeekends(startDate, endDate, baseEvent) {
+ splitLeaveExcludeWeekends(startDate, endDate, baseEvent) {
     const events = [];
     let currentDate = new Date(startDate);
     const end = new Date(endDate);
@@ -754,14 +707,58 @@ disabledDates() {
                 this.$refs.dt.first = 0; // Reset to first page
             }
         },
+        /**
+         * Vérifie s'il y a un chevauchement de congés pour la période sélectionnée
+         * @param {Object} dateInfo - Les informations de date sélectionnées
+         */
+        checkOverlap(dateInfo) {
+            if (!dateInfo || !this.leaveForm.start_day || !this.leaveForm.end_day) {
+                this.overlapWarning = null;
+                return;
+            }
+
+            const startDate = new Date(this.leaveForm.start_day);
+            const endDate = new Date(this.leaveForm.end_day);
+            
+            // Vérifier les chevauchements avec les congés existants
+            const hasOverlap = this.approvedLeaves.some(leave => {
+                if (leave.status_of_leave !== 'approved') return false;
+                
+                const leaveStart = new Date(leave.start_day);
+                const leaveEnd = new Date(leave.end_day || leave.start_day);
+                
+                // Vérifier si les périodes se chevauchent
+                return (
+                    (startDate >= leaveStart && startDate <= leaveEnd) ||
+                    (endDate >= leaveStart && endDate <= leaveEnd) ||
+                    (startDate <= leaveStart && endDate >= leaveEnd)
+                );
+            });
+
+            if (hasOverlap) {
+                this.overlapWarning = "Attention: La période sélectionnée chevauche un congé existant.";
+            } else {
+                this.overlapWarning = null;
+            }
+        },
     },
     watch: {
         approvedLeaves: {
             handler (newLeaves) {
-                this.eventSettings = { ...this.eventSettings, dataSource: newLeaves }
+                this.localLeaves = [...newLeaves];
+                // Vérifier à nouveau les chevauchements quand la liste des congés change
+                if (this.leaveForm.start_day || this.leaveForm.end_day) {
+                    this.checkOverlap();
+                }
             },
             deep: true,
             immediate: true
+        },
+        'leaveForm.start_day': function(newVal) {
+            if (newVal) this.checkOverlap();
+        },
+        'leaveForm.end_day': function(newVal) {
+            if (newVal) this.checkOverlap();
         }
     },
 }
@@ -836,76 +833,62 @@ disabledDates() {
                             :rowsPerPageOptions="[5, 10, 25]"
                             currentPageReportTemplate="Showing {first} to {last} of {totalRecords} leaves"
                             :globalFilterFields="['first_name', 'last_name', 'fullName', 'type_of_leave']"
-                          >
-                            <!-- full name --> 
-    
-                        <template #header>
-    <div class="flex justify-content-end">
-        <span class="p-input-icon-left">
-            <i class="pi pi-search" />
-            <InputText 
-                v-model="filters['global'].value" 
-                placeholder="Search by last name or leave type"
-                @input="resetPagination"
-            />
-        </span>
-    </div>
-</template>
-                           <!-- <template #header>
+                        >
+                            <template #header>
                                 <div class="flex justify-content-end">
-            <span class="p-input-icon-left">
-                <InputText v-model="filters['global'].value" placeholder="Search for Leaves"/>
-            </span>
+                                    <span class="p-input-icon-left">
+                                        <i class="pi pi-search" />
+                                        <InputText 
+                                            v-model="filters['global'].value" 
+                                            placeholder="Search by last name or leave type"
+                                            @input="resetPagination"
+                                        />
+                                    </span>
                                 </div>
-                            </template> -->
+                            </template>
 
                             <template #empty>
                                 <h4>No leaves found</h4>
                             </template>
 
-                             <!-- <Column selectionMode="multiple" headerStyle="width: 3rem"></Column> -->
-                            <Column field="first_name" header="First Name" :sortable="true"/>
-                            <Column field="last_name" header="Last Name" :sortable="true"/>
+                            <Column field="first_name" header="First Name" :sortable="true" />
+                            <Column field="last_name" header="Last Name" :sortable="true" />
+                            
                             <Column field="start_day" header="Start Day" :sortable="true"
-    :sort-field="(row) => this.parseDate(row.start_day).getTime()"
-    :sort-function="(event) => this.customDateSort(event, 'start_day')">
-    <template #body="slotProps">
-        <span :style="getHolidayStyle(slotProps.data.start_day)">
-            {{ slotProps.data.start_day }}
-        </span>
-    </template>
-</Column>
-<Column field="end_day" header="End Day" :sortable="true"
-    :sort-field="(row) => this.parseDate(row.end_day).getTime()"
-    :sort-function="(event) => this.customDateSort(event, 'end_day')">
-    <template #body="slotProps">
-        <span :style="getHolidayStyle(slotProps.data.end_day)">
-            {{ slotProps.data.end_day }}
-        </span>
-    </template>
-</Column>
-
-                            <!-- <Column field="start_day" header="Start Day" :sortable="true"
-                                     :sort-field="(row) => this.parseDate(row.start_day).getTime()"
-                                     :sort-function="(event) => this.customDateSort(event, 'start_day')">
+                                :sort-field="(row) => parseDate(row.start_day).getTime()"
+                                :sort-function="(event) => customDateSort(event, 'start_day')">
+                                <template #body="slotProps">
+                                    <span :style="getHolidayStyle(slotProps.data.start_day)">
+                                        {{ slotProps.data.start_day }}
+                                    </span>
+                                </template>
                             </Column>
+                            
                             <Column field="end_day" header="End Day" :sortable="true"
-                                    :sort-field="(row) => this.parseDate(row.end_day).getTime()"
-                                    :sort-function="(event) => this.customDateSort(event, 'end_day')">
-                            </Column> -->
+                                :sort-field="(row) => parseDate(row.end_day).getTime()"
+                                :sort-function="(event) => customDateSort(event, 'end_day')">
+                                <template #body="slotProps">
+                                    <span :style="getHolidayStyle(slotProps.data.end_day)">
+                                        {{ slotProps.data.end_day }}
+                                    </span>
+                                </template>
+                            </Column>
+
                             <Column field="type_of_leave" header="Type of Leave" :sortable="true"/>
+                            
                             <Column v-if="isProjectManager" field="team_name" header="Team" :sortable="true">
                                 <template #body="{ data }">
                                     {{ data.team_name }}
                                 </template>
                             </Column>
+                            
                             <Column field="authorization_hours" header="Authorisation Hours" :sortable="true">
                                 <template #body="slotProps">
                                     <span v-if="slotProps.data.type_of_leave === 'authorisation'" 
-                                          :class="[
-                                              'px-3 py-1 rounded-full',
-                                              slotProps.data.authorization_hours > 0 ? 'bg-blue-100' : 'bg-gray-100'
-                                          ]">
+                                        :class="[
+                                            'px-3 py-1 rounded-full',
+                                            slotProps.data.authorization_hours > 0 ? 'bg-blue-100' : 'bg-gray-100'
+                                        ]">
                                         {{ parseFloat(slotProps.data.authorization_hours || 0).toFixed(1) }}h
                                         <span class="text-gray-600 ml-1" v-if="slotProps.data.start_time && slotProps.data.end_time">
                                             ({{ slotProps.data.start_time }} - {{ slotProps.data.end_time }})
@@ -913,57 +896,75 @@ disabledDates() {
                                     </span>
                                 </template>
                             </Column>
-                            <Column bodyClass="text-center" field="status_of_leave" header="Status of Leave"
-                                    :sortable="true">
+                            
+                            <Column bodyClass="text-center" field="status_of_leave" header="Status of Leave" :sortable="true">
                                 <template #body="slotProps">
-                                    <Tag v-if="slotProps.data.status_of_leave === 'approved'" severity="success"
-                                         value="Approved"/>
-                                    <Tag v-else-if="slotProps.data.status_of_leave === 'pending'" severity="warn"
-                                         value="Pending"/>
+                                    <Tag v-if="slotProps.data.status_of_leave === 'approved'" severity="success" value="Approved"/>
+                                    <Tag v-else-if="slotProps.data.status_of_leave === 'pending'" severity="warn" value="Pending"/>
                                     <Tag v-else severity="danger" value="Refused"/>
                                 </template>
                             </Column>
 
-                           <Column field="action" header="Action" bodyClass="text-center" :sortable="true">
-    <template #body="slotProps">
-        <!-- Si pending -->
-        <template v-if="slotProps.data.status_of_leave === 'pending'">
-            <!-- Admin/PM peut approuver ou refuser -->
-            <template v-if="isAdmin || isProjectManager">
-                <PrimaryButton @click="approveLeave(slotProps.data.id)"
-                               class="bg-blue-600 text-white">
-                    Approve
-                </PrimaryButton>
-                <PrimaryButton @click="openRefuseDialog(slotProps.data.id)"
-                               class="bg-red-600 text-white">
-                    Reject
-                </PrimaryButton>
-            </template>
+                            <Column field="action" header="Action" bodyClass="text-center" :sortable="true">
+                                <template #body="slotProps">
+                                    <div class="flex flex-wrap gap-2 justify-center">
+                                        <!-- Pending Actions -->
+                                        <template v-if="slotProps.data.status_of_leave === 'pending'">
+                                            <!-- Admin/PM can approve or reject -->
+                                            <template v-if="isAdmin || isProjectManager">
+                                                <PrimaryButton 
+                                                    @click="approveLeave(slotProps.data.id)"
+                                                    class="bg-blue-600 text-white"
+                                                >
+                                                    Approve
+                                                </PrimaryButton>
+                                                <PrimaryButton 
+                                                    @click="openRefuseDialog(slotProps.data.id)"
+                                                    class="bg-red-600 text-white"
+                                                >
+                                                    Reject
+                                                </PrimaryButton>
+                                            </template>
+                                       
+                                            <!-- User can cancel their own pending request -->
+                                            <template v-else-if="slotProps.data.user_id === page.props.auth.user.id">
+                                                <PrimaryButton
+                                                    @click="cancelLeave(slotProps.data.id)"
+                                                    class="bg-pink-600 text-white"
+                                                >
+                                                    <svg 
+                                                        class="w-5 h-5 mr-1 inline" 
+                                                        fill="none" 
+                                                        stroke="currentColor" 
+                                                        stroke-width="2" 
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                                    </svg>
+                                                    Cancel
+                                                </PrimaryButton>
+                                            </template>
+                                        </template>
 
-            <PrimaryButton
-  v-if="slotProps.data.user_id === page.props.auth.user.id"
-  @click="cancelLeave(slotProps.data.id)"
-  class="bg-pink-600 text-white mr-2"
->
-  <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-  </svg>
-  Cancel
-</PrimaryButton>
-        </template>
-        <!-- Bouton Remove toujours visible pour admin/pm -->
-        <PrimaryButton v-if="isAdmin || isProjectManager"
-                       @click="deleteLeave(slotProps.data.id)"
-                       class="bg-gray-600 text-white mr-2">
-            Remove
-        </PrimaryButton>
-    </template>
-</Column>
-</DataTable>
+                                        <!-- Remove button always visible for admin/pm -->
+                                        <template v-if="isAdmin || isProjectManager">
+                                            <PrimaryButton 
+                                                @click="deleteLeave(slotProps.data.id)"
+                                                class="bg-gray-600 text-white"
+                                            >
+                                                Remove
+                                            </PrimaryButton>
+                                        </template>
+                                    </div>
+                                </template>
+                            </Column>
+                        </DataTable>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+      
+        
         <Dialog
             v-model:visible="showHistoryDialog"
             :closable="true"
@@ -1000,6 +1001,23 @@ disabledDates() {
             class="rounded-lg shadow-lg p-5 bg-white w-[95%] sm:w-[80%] md:w-[60%] lg:w-[50%] max-w-3xl mx-auto"
         >
             <div class="space-y-4">
+                <!-- Message d'avertissement pour les chevauchements -->
+                <div v-if="overlapWarning" class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Attention - Chevauchement détecté</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                {{ overlapWarning }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <section>
                     <h3 class="text-lg font-medium mb-2">Leave Type</h3>
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -1045,6 +1063,7 @@ disabledDates() {
                         placeholder="Select date"
                         :minDate="new Date()"
                         showIcon
+                        @date-select="checkOverlap"
                     />
 
                     <div v-if="leaveForm.type_of_leave !== 'authorisation' && leaveForm.type_of_leave !== 'halfday'">
@@ -1053,12 +1072,13 @@ disabledDates() {
                             v-model="leaveForm.end_day"
                             dateFormat="dd-mm-yy"
                             :disabled-days="[0,6]"
-                       :disabled-dates="disabledDates" 
+                            :disabled-dates="disabledDates" 
                             class="w-full rounded-lg p-2"
                             :disabled="leaveForm.type_of_leave === 'halfday' || leaveForm.type_of_leave === 'authorisation'"
                             placeholder="Select end date"
                             :minDate="leaveForm.start_day || new Date()"
                             showIcon
+                            @date-select="checkOverlap"
                         />
                     </div>
                 </section>
@@ -1234,146 +1254,4 @@ disabledDates() {
                  :is-full-page="true"/>
     </AuthenticatedLayout>
 </template>
-<style>
-.p-dialog-mask {
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(5px);
-}
-</style>
-<style scoped>
-/* Styles pour les indicateurs de type de congé */
-.manuel-item {
-    white-space: nowrap;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    background-color: #f9fafb;
-    border: 1px solid #e5e7eb;
-    font-size: 0.875rem;
-    transition: all 0.2s;
-}
 
-.manuel-item:hover {
-    background-color: #f3f4f6;
-}
-
-/* Amélioration de la table */
-:deep(.p-datatable) {
-    font-size: 0.875rem;
-}
-
-:deep(.p-datatable thead th) {
-    background-color: #f9fafb;
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    letter-spacing: 0.05em;
-    color: #4b5563;
-}
-
-/* Style pour les boutons d'action */
-.action-btn {
-    margin: 0 0.25rem;
-    padding: 0.4rem 0.75rem;
-    font-size: 0.875rem;
-    border-radius: 0.375rem;
-    transition: all 0.2s;
-}
-
-/* Style pour le calendrier */
-:deep(.e-schedule) {
-    border-radius: 0.5rem;
-    overflow: hidden;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-}
-
-/* Style pour les cartes de congé */
-.conges-card {
-    border-radius: 0.5rem;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.conges-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0,0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-/* Style pour les badges d'état */
-.status-badge {
-    padding: 0.25rem 0.5rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: capitalize;
-}
-
-/* Amélioration de la réactivité */
-@media (max-width: 768px) {
-    .grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .manuel-item {
-        padding: 0.5rem;
-        font-size: 0.75rem;
-    }
-    
-    :deep(.p-datatable) {
-        font-size: 0.8125rem;
-    }
-}
-
-/* Style pour les champs de formulaire */
-.form-group {
-    margin-bottom: 1.25rem;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: #374151;
-}
-
-/* Style pour les boutons */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
-    font-weight: 500;
-    transition: all 0.2s;
-    cursor: pointer;
-}
-
-/* .btn-primary {
-    background-color: #3b82f6;
-    color: white;
-    border: 1px solid #3b82f6;
-} */
-
-.btn-primary:hover {
-    background-color: #2563eb;
-    border-color: #2563eb;
-}
-
-.btn-secondary {
-    background-color: #f3f4f6;
-    color: #374151;
-    border: 1px solid #d1d5db;
-}
-
-.btn-secondary:hover {
-    background-color: #e5e7eb;
-}
-
-/* Style pour les messages d'erreur */
-.error-message {
-    color: #ef4444;
-    font-size: 0.875rem;
-    margin-top: 0.25rem;
-}
-
-
-</style>

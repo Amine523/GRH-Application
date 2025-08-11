@@ -47,6 +47,17 @@ Route::middleware('auth')->group(function () {
         Route::post('/{team}/add-member', [\App\Http\Controllers\TeamController::class, 'addMember'])->name('teams.add-member');
         Route::delete('/{team}/remove-member/{user}', [\App\Http\Controllers\TeamController::class, 'removeMember'])->name('teams.remove-member');
     });
+    // Project routes
+    Route::prefix('projects')->group(function () {
+        Route::get('/', [\App\Http\Controllers\ProjectController::class, 'index'])->name('projects.index');
+        Route::get('/create', [\App\Http\Controllers\ProjectController::class, 'create'])->name('projects.create');
+        Route::post('/', [\App\Http\Controllers\ProjectController::class, 'store'])->name('projects.store');
+        Route::get('/{project}', [\App\Http\Controllers\ProjectController::class, 'show'])->name('projects.show');
+        Route::get('/{project}/edit', [\App\Http\Controllers\ProjectController::class, 'edit'])->name('projects.edit');
+        Route::patch('/{project}', [\App\Http\Controllers\ProjectController::class, 'update'])->name('projects.update');
+        Route::delete('/{project}', [\App\Http\Controllers\ProjectController::class, 'destroy'])->name('projects.destroy');
+    });
+
     Route::get('/leaves', [LeaveController::class, 'index'])->name('leaves.index');
     Route::post('/leaves', [LeaveController::class, 'store'])->name('leaves.store');
     Route::post('/Leave/approve', [\App\Http\Controllers\LeaveController::class, 'approve'])->name('leave.approve');

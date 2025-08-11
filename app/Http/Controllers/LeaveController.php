@@ -10,12 +10,14 @@ use App\Models\User;
 use App\Models\Holiday;
 use App\Repositories\LeaveRepository;
 use App\Services\LeaveNotificationService;
+use App\Services\LeaveService;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
-use App\Services\LeaveService;
 
 class LeaveController extends Controller
 {
@@ -28,80 +30,130 @@ class LeaveController extends Controller
 
     public function index(): Response
     {
-        $user = auth()->user();
+        $user = auth()->user()->load('profile');
+        $leaves = collect();
+        $users = collect();
 
         if ($user->hasRole('admin')) {
             $leaves = Leave::with(['user.profile'])
-                ->orderBy('start_day', 'asc')
+                ->orderBy('start_day', 'desc')
                 ->get();
-            $users = User::with('profile')->get();
+            $users = User::with(['profile', 'team'])->get();
         } elseif ($user->hasRole('project_manager')) {
-            $team = Team::with(['users.profile'])->find($user->team_id);
-            $users = $team->users;
-            $userIds = $users->pluck('id');
-            $leaves = Leave::with(['user.profile'])
-                ->whereIn('user_id', $userIds)
-                ->orderBy('start_day', 'asc')
-                ->get();
+            $managedTeams = Team::where('project_manager_id', $user->id)->get();
+
+            if ($managedTeams->isNotEmpty()) {
+                $userIds = $managedTeams->flatMap(function ($team) {
+                    return $team->employee_ids ?? [];
+                })->unique()->values()->all();
+
+                if (!in_array($user->id, $userIds)) {
+                    $userIds[] = $user->id;
+                }
+
+                $users = User::with(['profile', 'team'])
+                    ->whereIn('id', $userIds)
+                    ->get();
+
+                $leaves = Leave::with(['user.profile'])
+                    ->whereIn('user_id', $userIds)
+                    ->orderBy('start_day', 'desc')
+                    ->get();
+            } else {
+                $users = collect([$user]);
+                $leaves = Leave::with(['user.profile'])
+                    ->where('user_id', $user->id)
+                    ->orderBy('start_day', 'desc')
+                    ->get();
+            }
         } else {
             $leaves = Leave::with(['user.profile'])
                 ->where('user_id', $user->id)
-                ->orderBy('start_day', 'asc')
+                ->orderBy('start_day', 'desc')
                 ->get();
-            $users = User::with('profile')->get();
+            $users = collect([$user]);
         }
+
+        $teams = Team::all();
+        $teamsData = $teams->map(function ($team) {
+            return [
+                'id' => $team->id,
+                'team_name' => $team->team_name,
+                'employee_ids' => $team->employee_ids ?? [],
+                'project_manager_id' => $team->project_manager_id
+            ];
+        });
 
         return Inertia::render('Leaves/Index', [
             'leaves' => $leaves,
             'users' => $users,
+            'teams' => $teamsData,
             'holidays' => Holiday::all(),
         ]);
     }
-    /**
-     * @throws Exception
-     */
+
+    public function show($id)
+    {
+        $leave = Leave::with(['user.profile'])->findOrFail($id);
+        return Inertia::render('Leaves/Show', [
+            'leave' => $leave
+        ]);
+    }
+
     public function store(LeaveRequest $leaveRequest, LeaveService $leaveService)
     {
         $user = User::find($leaveRequest->user_id);
         if (!$user) {
             return back()->with('error', 'User not found.');
         }
+
+        $startDay = Carbon::parse($leaveRequest->start_day)->addDay();
+        $endDay = $leaveRequest->end_day
+            ? Carbon::parse($leaveRequest->end_day)->addDay()
+            : $startDay;
+
+        if (Leave::hasTeamOverlap($startDay, $endDay, $user->id)) {
+            return back()->with('error', 'Another team member already has leave scheduled during this period.');
+        }
+
         if ($leaveRequest->type_of_leave === 'deduction') {
             $leaveService->handleLateDeduction($user, $leaveRequest);
-            return to_route('leave.index')->with('success', "Leave deduction has been saved.");
+            return to_route('leaves.index')->with('success', "Leave deduction has been saved.");
         }
-
-        $transformedStartDay = Carbon::parse($leaveRequest->start_day)->addDay();
-        $transformedEndDay = $leaveRequest->end_day
-            ? Carbon::parse($leaveRequest->end_day)->addDay()
-            : $transformedStartDay;
-        $transformedStartTime = Carbon::parse($leaveRequest->start_time)->format('H:i');
-
-        $teamName = strtolower(trim($user->team->team_name ?? ''));
-
-        $leave = $this->leaveRepository->createLeave(
-            $leaveRequest,
-            $transformedStartDay,
-            $transformedEndDay,
-            $transformedStartTime
-        );
-
-        LeaveNotificationService::sendLeaveNotifications($user, $leave);
-
-        $shouldApprove = ($teamName !== 'softtodo');
-
-        $message = ucfirst($leaveRequest->type_of_leave) . " request submitted successfully.";
-        if ($shouldApprove) {
-            $leaveService->approve($leave->id);
-            $message = ucfirst($leaveRequest->type_of_leave) . " request submitted and approved successfully.";
-        }
-
-        return to_route('leaves.index')->with('success', $message);
     }
 
-    /**
-     * Approve a leave request.
-     */
+    public function edit($id)
+    {
+        $leave = Leave::findOrFail($id);
+        $users = User::with(['profile', 'team'])->get();
+        $teams = Team::all();
+
+        return Inertia::render('Leaves/Edit', [
+            'leave' => $leave,
+            'users' => $users,
+            'teams' => $teams
+        ]);
+    }
+
+    public function update(LeaveRequest $request, $id)
+    {
+        $leave = Leave::findOrFail($id);
+
+        $leave->update([
+            'user_id' => $request->user_id,
+            'start_day' => $request->start_day,
+            'start_time' => $request->start_time,
+            'end_day' => $request->end_day,
+            'end_time' => $request->end_time,
+            'type_of_leave' => $request->type_of_leave,
+            'status_of_leave' => $request->status_of_leave,
+            'authorization_hour' => $request->authorization_hour,
+            'deduction_days' => $request->deduction_days
+        ]);
+
+        return redirect()->route('leaves.index')->with('success', 'Leave updated successfully.');
+    }
+
     public function approve(LeaveService $leaveService)
     {
         $request = request()->validate([
@@ -148,8 +200,6 @@ class LeaveController extends Controller
             $user->authorization_hours -= $leave->authorization_hour;
         } elseif ($leave->type_of_leave === 'halfday') {
             $user->valid_balance += 0.5;
-        } elseif ($leave->type_of_leave === 'deduction') {
-            $user->valid_balance += $leave->deduction_days;
         } else {
             $leaveDays = Carbon::parse($leave->start_day)
                     ->diffInWeekdays(Carbon::parse($leave->end_day)) + 1;
@@ -160,7 +210,6 @@ class LeaveController extends Controller
 
         return to_route('leaves.index')->with('success', 'Leave request deleted successfully. Balance updated.');
     }
-
 
     public function cancel(Request $request)
     {
@@ -183,5 +232,58 @@ class LeaveController extends Controller
         $leave->delete();
 
         return back()->with('success', 'Leave request cancelled successfully.');
+    }
+
+    /**
+     * Check for overlapping leave requests.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function checkOverlap(Request $request)
+    {
+        $request->validate([
+            'start_day' => 'required|date',
+            'end_day' => 'required|date|after_or_equal:start_day',
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $startDay = Carbon::parse($request->start_day);
+        $endDay = Carbon::parse($request->end_day);
+        $userId = $request->user_id;
+
+        // Check for existing leaves that overlap with the requested dates
+        $overlappingLeaves = Leave::where('user_id', $userId)
+            ->where('status_of_leave', '!=', 'rejected')
+            ->where(function ($query) use ($startDay, $endDay) {
+                $query->whereBetween('start_day', [$startDay, $endDay])
+                    ->orWhereBetween('end_day', [$startDay, $endDay])
+                    ->orWhere(function ($q) use ($startDay, $endDay) {
+                        $q->where('start_day', '<=', $startDay)
+                            ->where('end_day', '>=', $endDay);
+                    });
+            })
+            ->get();
+
+        if ($overlappingLeaves->isNotEmpty()) {
+            $leaveDates = $overlappingLeaves->map(function ($leave) {
+                return [
+                    'start' => $leave->start_day->format('Y-m-d'),
+                    'end' => $leave->end_day->format('Y-m-d'),
+                    'type' => $leave->type_of_leave,
+                    'status' => $leave->status_of_leave
+                ];
+            });
+
+            return response()->json([
+                'is_overlapping' => true,
+                'overlap_message' => 'You already have leave requests during this period.',
+                'leaves' => $leaveDates
+            ]);
+        }
+
+        return response()->json([
+            'is_overlapping' => false
+        ]);
     }
 }
