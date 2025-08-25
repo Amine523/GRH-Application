@@ -56,6 +56,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/{project}/edit', [\App\Http\Controllers\ProjectController::class, 'edit'])->name('projects.edit');
         Route::patch('/{project}', [\App\Http\Controllers\ProjectController::class, 'update'])->name('projects.update');
         Route::delete('/{project}', [\App\Http\Controllers\ProjectController::class, 'destroy'])->name('projects.destroy');
+        Route::post('/{project}/add-member', [\App\Http\Controllers\ProjectController::class, 'addMember'])->name('projects.add-member');
+        Route::delete('/{project}/remove-member/{user}', [\App\Http\Controllers\ProjectController::class, 'removeMember'])->name('projects.remove-member');
     });
 
     Route::get('/leaves', [LeaveController::class, 'index'])->name('leaves.index');

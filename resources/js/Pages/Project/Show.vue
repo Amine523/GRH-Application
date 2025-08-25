@@ -28,8 +28,8 @@
       <!-- Project Manager Info -->
       <div class="bg-white p-4 rounded shadow mt-6">
         <h2 class="text-lg font-semibold">Project Manager</h2>
-        <p>Name: {{ project.project_manager?.name || 'Not defined' }}</p>
-        <p>Email: {{ project.project_manager?.email || 'Not defined' }}</p>
+        <p>Name:  {{ project.manager?.profile?.first_name }} {{ project.manager?.profile?.last_name }}</p>
+        <!-- <p>Email: {{ project.project_manager?.email || 'Not defined' }}</p> -->
       </div>
 
       <!-- Project Members List -->
@@ -72,7 +72,7 @@
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
+                      </svg> 
                     </div>
                     <div v-if="member.id" class="absolute inset-y-0 right-0 flex items-center pr-2">
                       <button 
@@ -89,29 +89,29 @@
                   
                   <!-- Dropdown -->
                   <div 
-                    v-show="member.isOpen" 
-                    class="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
-                  >
-                    <div v-if="filteredUsers(member).length === 0" class="px-4 py-2 text-gray-500">
-                      No users found
-                    </div>
-                    <div 
-                      v-else
-                      v-for="user in filteredUsers(member)" 
-                      :key="user.id"
-                      @click="selectUser(member, user)"
-                      class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                      v-show="member.isOpen" 
+                      class="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
                     >
-                      <div class="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-medium">
-                        {{ getUserInitials(user) }}
+                      <div v-if="filteredUsers(member).length === 0" class="px-4 py-2 text-gray-500">
+                        No users found
                       </div>
-                      <div class="ml-3">
-                        <div class="font-medium text-gray-900">
-                          {{ user.profile?.first_name }} {{ user.profile?.last_name }}
+                      <div 
+                        v-else
+                        v-for="user in filteredUsers(member)" 
+                        :key="user.id"
+                        @click="selectUser(member, user)"
+                        class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                      >
+                        <div class="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-medium">
+                          {{ getUserInitials(user) }}
                         </div>
-                        <div class="text-xs text-gray-500">
-                          {{ user.email }}
-                        </div>
+                        <div class="ml-3">
+                          <div class="font-medium text-gray-900">
+                            {{ user.profile?.first_name }} {{ user.profile?.last_name }}
+                          </div>
+                          <div class="text-xs text-gray-500">
+                            {{ user.email }}
+                          </div>
                       </div>
                     </div>
                   </div>
@@ -124,9 +124,9 @@
                   class="p-2 text-red-600 hover:text-red-800 focus:outline-none"
                   :disabled="processing"
                 >
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <!-- <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
+                  </svg> -->
                   <span class="sr-only">Remove</span>
                 </button>
               </div>

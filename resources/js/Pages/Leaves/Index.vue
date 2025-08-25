@@ -66,6 +66,7 @@ export default {
         return {
             page: usePage(),
             toast,
+            checkOverlap: false,
             selectedLeaves: [],
             overlapWarning: null,
             leaveTypes: [
@@ -75,16 +76,16 @@ export default {
                 { label: 'Half Day', value: 'halfday' },
                 { label: 'Late Deduction', value: 'deduction' }
             ],
-            // Jours fériés définis par mois et jour (sans année)
+            // Public holidays defined by month and day (without year)
             officialHolidays: [
-                { month: 0, day: 1, name: "Jour de l'An" },
-                { month: 2, day: 20, name: "Fête de l'Indépendance" },
-                { month: 3, day: 9, name: "Fête des Martyrs" }, 
-                { month: 4, day: 1, name: "Fête du Travail" }, 
-                { month: 6, day: 25, name: "Fête de la République" },
-                { month: 7, day: 13, name: "Fête de la Femme" }, 
-                { month: 9, day: 15, name: "Fête de l'Évacuation" }, 
-                { month: 11, day: 17, name: "Fête de la Révolution" }
+                { month: 0, day: 1, name: "New Year's Day" },
+                { month: 2, day: 20, name: "Independence Day" },
+                { month: 3, day: 9, name: "Martyrs' Day" }, 
+                { month: 4, day: 1, name: "Labor Day" }, 
+                { month: 6, day: 25, name: "Republic Day" },
+                { month: 7, day: 13, name: "Women's Day" }, 
+                { month: 9, day: 15, name: "Evacuation Day" }, 
+                { month: 11, day: 17, name: "Revolution Day" }
                 
             ],
             sessionOptions: [
@@ -208,7 +209,7 @@ disabledDates() {
     const dates = [];
     const currentYear = new Date().getFullYear();
     
-    // Ajouter les jours fériés de la base de données
+    // Add holidays from the database
     if (Array.isArray(this.holidays)) {
         this.holidays.forEach(holiday => {
             const start = new Date(holiday.start_date);
@@ -222,23 +223,23 @@ disabledDates() {
         });
     }
     
-    // Ajouter les jours fériés statiques
+    // Add static public holidays
     const officialHolidays = [
-        { month: 0, day: 1 },    // Jour de l'An
-        { month: 2, day: 20 },   // Fête de l'Indépendance
-        { month: 3, day: 9 },    // Fête des Martyrs
-        { month: 4, day: 1 },    // Fête du Travail
-        { month: 6, day: 25 },   // Fête de la République
-        { month: 7, day: 13 },   // Fête de la Femme
-        { month: 9, day: 15 },   // Fête de l'Évacuation
-        { month: 11, day: 17 }   // Fête de la Révolution
+        { month: 0, day: 1 },    // New Year's Day
+        { month: 2, day: 20 },   // Independence Day
+        { month: 3, day: 9 },    // Martyrs' Day
+        { month: 4, day: 1 },    // Labor Day
+        { month: 6, day: 25 },   // Republic Day
+        { month: 7, day: 13 },   // Women's Day
+        { month: 9, day: 15 },   // Evacuation Day
+        { month: 11, day: 17 }   // Revolution Day
     ];
     
-    // Ajouter pour l'année en cours et la suivante
+    // Add for current and next year
     [currentYear, currentYear + 1].forEach(year => {
         officialHolidays.forEach(holiday => {
             const date = new Date(year, holiday.month, holiday.day);
-            // Vérifier si la date n'est pas déjà incluse
+            // Check if date is not already included
             if (!dates.some(d => d.getTime() === date.getTime())) {
                 dates.push(date);
             }
@@ -296,7 +297,7 @@ disabledDates() {
                     events.push(...segments)
                 })
 
-            // Ajouter les jours fériés de la base de données
+            // Add holidays from the database
             const currentYear = new Date().getFullYear();
             const holidayEvents = [];
             
@@ -332,14 +333,14 @@ disabledDates() {
 
             // Add static official holidays
             const officialHolidays = [
-                { month: 0, day: 1, name: "Jour de l'An" },
-                { month: 2, day: 20, name: "Fête de l'Indépendance" },
-                { month: 3, day: 9, name: "Fête des Martyrs" }, 
-                { month: 4, day: 1, name: "Fête du Travail" }, 
-                { month: 6, day: 25, name: "Fête de la République" },
-                { month: 7, day: 13, name: "Fête de la Femme" }, 
-                { month: 9, day: 15, name: "Fête de l'Évacuation" }, 
-                { month: 11, day: 17, name: "Fête de la Révolution" }
+                { month: 0, day: 1, name: "New Year's Day" },
+                { month: 2, day: 20, name: "Independence Day" },
+                { month: 3, day: 9, name: "Martyrs' Day" }, 
+                { month: 4, day: 1, name: "Labor Day" }, 
+                { month: 6, day: 25, name: "Republic Day" },
+                { month: 7, day: 13, name: "Women's Day" }, 
+                { month: 9, day: 15, name: "Evacuation Day" }, 
+                { month: 11, day: 17, name: "Revolution Day" }
             ];
 
             officialHolidays.forEach(holiday => {
@@ -543,25 +544,36 @@ disabledDates() {
 
             return new Date(`${year}-${month}-${day}T00:00:00`);
         },
-        approveLeave (leaveId) {
-            router.post(route('leave.approve'), { id: leaveId }, {
-                preserveScroll: true,
-                onSuccess: this.refreshLeaves
-            })
-        },
-        deleteLeave (leaveId) {
-            router.post(route('leave.delete'), { id: leaveId }, {
+        approveLeave(leaveId) {
+            this.$inertia.post(route('leave.approve'), {
+                id: leaveId
+            }, {
                 preserveScroll: true,
                 onSuccess: () => {
-                    this.localLeaves = this.localLeaves.filter(leave => leave.id !== leaveId)
-                }
-            })
+                    this.refreshLeaves();
+                },
+            });
         },
-        refuseLeave () {
-            this.leaveForm.post(route('leave.refuse'), {
+        deleteLeave(leaveId) {
+            this.$inertia.post(route('leave.delete'), {
+                id: leaveId
+            }, {
                 preserveScroll: true,
-                onSuccess: this.refreshLeaves
-            })
+                onSuccess: () => {
+                    this.refreshLeaves();
+                },
+            });
+        },
+        refuseLeave() {
+            const leaveData = {
+                id: this.refusedLeave,
+                leaveReason: this.refuseReason,
+            };
+            router.post(route('leave.refuse'), leaveData).then(response => {
+                this.refreshLeaves();
+            }).catch(error => {
+                console.error('Error refusing leave:', error);
+            });
         },
         // code pour moi
  
@@ -573,15 +585,10 @@ disabledDates() {
                 }
             })
         },
-        refreshLeaves () {
-            router.visit(route('leaves.index'), {
-                only: ['leaves'],
-                preserveScroll: true,
-                preserveState: true,
-                onSuccess: (response) => {
-                    this.localLeaves = response.props.leaves
-                }
-            })
+        refreshLeaves() {
+            router.get(route('leave.index')).then(response => {
+                this.leaves = response.data.leaves;
+            });
         },
         mapToOptions (items, labelFields, valueField = 'id') {
             if (!Array.isArray(items)) return [];
@@ -618,7 +625,7 @@ disabledDates() {
             return field.split('.').reduce((obj, key) => obj && obj[key], item)
         },
         openDialog () {
-            // Effacer les messages d'erreur précédents
+            // Clear previous error messages
             if (this.$page.props.flash) {
                 this.$page.props.flash.error = null;
             }
@@ -634,10 +641,11 @@ disabledDates() {
         closeDialog() {
             this.showDialog = false;
             this.leaveForm.reset();
-            // Effacer le message d'erreur
-            if (this.$page.props.flash) {
-                this.$page.props.flash.error = null;
-            }
+            this.overlapWarning = null;
+            this.hasOverlap = false;
+            this.isButtonDisabled = false;
+            this.$page.props.flash = {};
+            this.$inertia.reload({ only: ['leaves'] });
         },
         getStartTime () {
             switch (this.leaveForm.type_of_leave) {
@@ -652,7 +660,7 @@ disabledDates() {
     let currentDate = new Date(startDate);
     const end = new Date(endDate);
     while (currentDate <= end) {
-        // Ne pas ajouter d'événement pour les week-ends et jours fériés
+        // Don't add events for weekends and holidays
         if (!this.isWeekendOrHoliday(currentDate)) {
             const eventDate = new Date(currentDate);
             const formattedDate = moment(eventDate).format('DD/MM/YYYY');
@@ -703,8 +711,8 @@ disabledDates() {
                 onSuccess: () => this.closeModal(),
             });
         },
-        submitLeaveRequest() {
-            this.processingLeaveRequest = true;
+         submitLeaveRequest() {
+             this.processingLeaveRequest = true;
             
             if (!this.leaveForm.user_id) {
                 this.leaveForm.user_id = this.$page.props.auth.user.id;
@@ -728,7 +736,7 @@ disabledDates() {
             
             this.leaveForm.post(route('leaves.store'), {
                 preserveScroll: true,
-                onSuccess: () => {
+            onSuccess: () => {
                     this.processingLeaveRequest = false
                     this.isButtonDisabled = false;
                 },
@@ -748,9 +756,9 @@ disabledDates() {
             });
         },
     
-        // Méthode appelée lors du clic sur une cellule du calendrier
+        // Method called when clicking on a calendar cell
         onCellClick(args) {
-            // Vérifier si la date cliquée est un jour férié
+            // Check if the clicked date is a holiday
             const clickedDate = args.startTime;
             const isHoliday = this.holidays.some(holiday => {
                 const start = new Date(holiday.start_date);
@@ -758,7 +766,7 @@ disabledDates() {
                 return clickedDate >= start && clickedDate <= end;
             });
 
-            // Si c'est un jour férié, annuler l'action par défaut
+            // If it's a holiday, cancel the default action
             if (isHoliday) {
                 args.cancel = true;
                 return;
@@ -823,8 +831,20 @@ disabledDates() {
                                 <PrimaryButton v-if="isAdmin" @click="openAddHolidayDialog" class="bg-orange-600 text-white">
                                     Add Holiday
                                 </PrimaryButton>
-                                <PrimaryButton @click="openDialog" class="bg-green-600 text-white">
-                                    Add Leave Request
+                                <PrimaryButton 
+                                    @click="openDialog" 
+                                    class="bg-green-600 text-white"
+                                    :disabled="processingLeaveRequest"
+                                    :class="{ 'opacity-50 cursor-not-allowed': processingLeaveRequest }"
+                                >
+                                    <span v-if="processingLeaveRequest" class="flex items-center">
+                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Processing...
+                                    </span>
+                                    <span v-else>Add Leave Request</span>
                                 </PrimaryButton>
                             </div>
                         </div>
@@ -1136,7 +1156,7 @@ disabledDates() {
                         @click="closeDialog"
                         class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition duration-200"
                     >
-                        Annuler
+                    close
                     </button>
                     <button
                         type="button"
@@ -1150,10 +1170,10 @@ disabledDates() {
                         class="px-4 py-2 rounded-lg transition duration-200"
                     >
                         <span v-if="processingLeaveRequest || isCheckingOverlap" class="flex items-center">
-                            <i class="pi pi-spin pi-spinner mr-2"></i> {{ isCheckingOverlap ? 'Vérification...' : 'Traitement...' }}
+                            <i class="pi pi-spin pi-spinner mr-2"></i> {{ isCheckingOverlap ? 'Checking...' : 'Processing...' }}
                         </span>
-                        <span v-else-if="hasOverlap">Demande non disponible</span>
-                        <span v-else>Demander un congé</span>
+                        <span v-else-if="hasOverlap">Request not available</span>
+                        <span v-else>Request Leave</span>
                     </button>
                 </div>
 

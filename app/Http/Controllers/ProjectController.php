@@ -182,8 +182,14 @@ class ProjectController extends Controller
             ? User::with('profile')->whereIn('id', $memberIds)->get()
             : collect();
 
+        // Get project managers (users with project_manager role or admin)
+        $projectManagers = User::whereHas('roles', function($q) {
+            $q->whereIn('name', ['admin', 'project_manager']);
+        })->with('profile')->get();
+
         return Inertia::render('Project/Edit', [
             'project' => $project,
+            'projectManagers' => $projectManagers,
             'users' => User::with('profile')->get(),
             'auth' => [
                 'user' => $user,
@@ -193,50 +199,140 @@ class ProjectController extends Controller
         ]);
     }
 
+
     /**
+ * Remove a member from the project.
+ */
+/**
      * Update the specified project in storage.
      */
     public function update(Request $request, Project $project)
     {
-        // Log the user and project for debugging
-        \Log::info('Update Project - User ID: ' . auth()->id() . ', Project ID: ' . $project->id);
-        \Log::info('Request Data: ' . json_encode($request->all()));
-
-        try {
-            $this->authorize('update', $project);
-        } catch (\Exception $e) {
-            \Log::error('Authorization failed: ' . $e->getMessage());
-            throw $e;
+        $user = Auth::user()->load('roles');
+        
+        // Check if user is admin, project manager, or the manager of this project
+        $isManager = $user->id === $project->manager_id;
+        $hasAccess = $user->hasRole('admin') || $user->hasRole('project_manager') || $isManager;
+        
+        if (!$hasAccess) {
+            return response()->json([
+                'message' => 'You are not authorized to update this project.'
+            ], 403);
         }
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'manager_id' => 'required|exists:users,id',
-            'member_ids' => 'nullable|array',
-            'member_ids.*' => 'exists:users,id',
+            'members' => 'nullable|array',
+            'members.*.id' => 'required|exists:users,id',
         ]);
 
         try {
             DB::beginTransaction();
 
+            // Get member IDs from the request
+            $memberIds = isset($validated['members'])
+                ? collect($validated['members'])->pluck('id')->unique()->values()->all()
+                : [];
+
+            // Update the project
             $project->update([
                 'name' => $validated['name'],
-                'description' => $validated['description'] ?? null,
+                'description' => $validated['description'],
                 'manager_id' => $validated['manager_id'],
+                'member_ids' => $memberIds,
             ]);
-
-            if (isset($validated['member_ids'])) {
-                $project->members()->sync($validated['member_ids']);
-            }
 
             DB::commit();
 
-            return redirect()->route('projects.index')
+            return redirect()
+                ->route('projects.show', $project)
                 ->with('success', 'Project updated successfully.');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Failed to update project. Please try again.');
+            \Log::error('Error updating project: ' . $e->getMessage());
+            
+            return back()
+                ->with('error', 'Failed to update project. Please try again.')
+                ->withInput();
+        }
+    }
+    /**
+     * Remove a member from the project.
+     */
+    /**
+     * Add members to the project.
+     */
+    public function addMember(Request $request, Project $project)
+    {
+        $user = Auth::user();
+        
+        // Check if user is admin, project manager, or the manager of this project
+        $isManager = $user->id === $project->manager_id;
+        $hasAccess = $user->hasRole('admin') || $user->hasRole('project_manager') || $isManager;
+        
+        if (!$hasAccess) {
+            return response()->json([
+                'message' => 'You are not authorized to add members to this project.'
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'user_ids' => 'required|array',
+            'user_ids.*' => 'exists:users,id',
+        ]);
+
+        try {
+            // Get current member IDs
+            $currentMemberIds = $project->member_ids ?? [];
+            
+            // Add new member IDs, ensuring no duplicates
+            $newMemberIds = array_unique(array_merge($currentMemberIds, $validated['user_ids']));
+            
+            // Update the project with the new member list
+            $project->member_ids = array_values($newMemberIds);
+            $project->save();
+
+            return back()->with('success', 'Members added successfully to the project.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to add members to the project: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Remove a member from the project.
+     */
+    public function removeMember(Project $project, User $user)
+    {
+        $currentUser = Auth::user();
+        
+        // Check if current user is admin, project manager, or the manager of this project
+        $isManager = $currentUser->id === $project->manager_id;
+        $hasAccess = $currentUser->hasRole('admin') || $currentUser->hasRole('project_manager') || $isManager;
+        
+        if (!$hasAccess) {
+            return response()->json([
+                'message' => 'You are not authorized to remove members from this project.'
+            ], 403);
+        }
+
+        try {
+            // Get current member IDs
+            $memberIds = $project->member_ids ?? [];
+            $userId = (int) $user->id;
+
+            // Remove the user from the member_ids array
+            $updatedMemberIds = array_values(array_filter($memberIds, fn($id) => (int) $id !== $userId));
+
+            // Update the project with the new member list
+            $project->member_ids = $updatedMemberIds;
+            $project->save();
+
+            return back()->with('success', 'Member removed successfully from the project.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to remove member from the project: ' . $e->getMessage());
         }
     }
 

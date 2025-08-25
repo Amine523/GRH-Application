@@ -28,8 +28,8 @@
         <!-- Project Manager Info -->
         <div class="bg-white p-4 rounded shadow mt-6">
           <h2 class="text-lg font-semibold">Project Manager</h2>
-          <p>Name: {{ team.project_manager?.name || 'Not defined' }}</p>
-          <p>Email: {{ team.project_manager?.email || 'Not defined' }}</p>
+          <p>Name: {{ team.project_manager?.profile?.first_name }} {{ team.project_manager?.profile?.last_name || 'Not assigned' }}</p>
+          <!-- <p>Email: {{ team.project_manager?.email || 'Not defined' }}</p> -->
         </div>
   
         <!-- Team Members List -->
@@ -131,21 +131,38 @@
                   </button>
                 </div>
                 
-                <!-- Selected User Badge -->
-                <div v-if="member.id" class="mt-2 flex items-center">
-                  <!-- <div class="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-medium">
-                    {{ getUserInitials(selectedUser(member)) }}
-                  </div> -->
-                  <div class="ml-3">
-                    <div class="text-sm font-medium text-gray-900">
-                      {{ selectedUser(member)?.profile?.first_name }} {{ selectedUser(member)?.profile?.last_name }}
-                    </div>
-                    <div class="text-xs text-gray-500">
-                      {{ selectedUser(member)?.email }}
-                    </div>
-                  </div>
-                </div>
-              </div>
+             <!-- Selected User Badge -->
+<div 
+  v-if="selectedUser(member)" 
+  class="mt-3 flex items-center p-2 bg-gray-50 rounded-lg shadow-sm border border-gray-200"
+>
+  <!-- Avatar -->
+  <!-- <div class="flex-shrink-0 h-9 w-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-semibold">
+    {{ getUserInitials(selectedUser(member)) }}
+  </div> -->
+
+  <!-- Infos utilisateur -->
+  <div class="ml-3 flex-1">
+    <div class="text-sm font-medium text-gray-900">
+      {{ selectedUser(member)?.profile?.first_name }} {{ selectedUser(member)?.profile?.last_name }}
+    </div>
+    <div class="text-xs text-gray-500">
+      {{ selectedUser(member)?.email }}
+    </div>
+  </div>
+
+  <!-- Bouton retirer -->
+  <button 
+    type="button"
+    @click="member.user_id = null"
+    class="ml-3 inline-flex items-center px-2 py-1 text-xs text-gray-500 hover:text-red-600 transition"
+    title="Remove user"
+  >
+    ✕
+  </button>
+</div>
+</div>
+
             </div>
   
             <button @click="addMember" class="text-sm text-indigo-600 mb-4">+ Add another</button>

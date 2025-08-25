@@ -51,15 +51,16 @@ const showingNavigationDropdown = ref(false);
     :active="route().current('users.index')">
     User List
 </NavLink>
-                                <NavLink
-                                    :href="route('teams.index')"
-                                    :active="route().current('teams.index')">
-                                    Teams
-                                </NavLink>
+                               
                                 <NavLink
                                     :href="route('projects.index')"
                                     :active="route().current('projects.index')">
                                     Projects
+                                </NavLink>
+                                <NavLink
+                                    :href="route('teams.index')"
+                                    :active="route().current('teams.index')">
+                                    Teams
                                 </NavLink>
                                 <NavLink
                                     :href="route('leaves.index')"
@@ -181,16 +182,16 @@ const showingNavigationDropdown = ref(false);
                             :active="route().current('users.index')">
                             User List
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            :href="route('teams.index')"
-                            :active="route().current('teams.index')">
-                            Teams
-                        </ResponsiveNavLink>
                                 <ResponsiveNavLink
                             :href="route('projects.index')"
                             :active="route().current('projects.index')"
                         >
                             Projects
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('teams.index')"
+                            :active="route().current('teams.index')">
+                            Teams
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             :href="route('leaves.index')"

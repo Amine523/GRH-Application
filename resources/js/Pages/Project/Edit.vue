@@ -37,18 +37,19 @@
 
                         <!-- Project Manager -->
                         <div>
-                            <InputLabel for="project_manager_id" value="Project Manager" />
+                            <InputLabel for="manager_id" value="Project Manager" />
                             <select 
-                                id="project_manager_id"
-                                v-model="form.project_manager_id"
+                                id="manager_id"
+                                v-model="form.manager_id"
                                 class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                required
                             >
                                 <option value="">Select a Project Manager</option>
                                 <option v-for="manager in projectManagers" :key="manager.id" :value="manager.id">
                                     {{ manager.name }}
                                 </option>
                             </select>
-                            <InputError class="mt-2" :message="form.errors.project_manager_id" />
+                            <InputError class="mt-2" :message="form.errors.manager_id" />
                         </div>
 
                         <!-- Status -->
@@ -93,9 +94,9 @@
 
                         <!-- Buttons -->
                         <div class="flex items-center justify-end mt-4 space-x-4">
-                            <DangerButton @click="confirmProjectDeletion">
+                            <!-- <DangerButton @click="confirmProjectDeletion">
                                 Delete Project
-                            </DangerButton>
+                            </DangerButton> -->
                             
                             <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
                                 Update Project
@@ -104,7 +105,7 @@
                     </form>
 
                     <!-- Delete Project Confirmation Modal -->
-                    <ConfirmationModal :show="confirmingProjectDeletion" @close="closeModal">
+                    <!-- <ConfirmationModal :show="confirmingProjectDeletion" @close="closeModal">
                         <template #title>
                             Delete Project
                         </template>
@@ -116,18 +117,18 @@
                         <template #footer>
                             <SecondaryButton @click="closeModal">
                                 Cancel
-                            </SecondaryButton>
+                            </SecondaryButton> -->
 
-                            <DangerButton
+                            <!-- <DangerButton
                                 class="ml-3"
                                 :class="{ 'opacity-25': form.processing }"
                                 :disabled="form.processing"
                                 @click="deleteProject"
                             >
                                 Delete Project
-                            </DangerButton>
-                        </template>
-                    </ConfirmationModal>
+                            </DangerButton> -->
+                        <!-- </template> -->
+                    <!-- </ConfirmationModal> -->
                 </div>
             </div>
         </div>
@@ -158,12 +159,12 @@ const props = defineProps({
 });
 
 const form = useForm({
-    name: props.project.name,
-    description: props.project.description,
-    project_manager_id: props.project.project_manager_id,
-    status: props.project.status,
-    start_date: props.project.start_date,
-    end_date: props.project.end_date,
+    name: props.project.name || '',
+    description: props.project.description || '',
+    manager_id: props.project.manager_id || '',
+    status: props.project.status || 'pending',
+    start_date: props.project.start_date ? props.project.start_date.split(' ')[0] : '',
+    end_date: props.project.end_date ? props.project.end_date.split(' ')[0] : '',
 });
 
 const confirmingProjectDeletion = ref(false);

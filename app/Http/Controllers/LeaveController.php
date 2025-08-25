@@ -76,32 +76,8 @@ class LeaveController extends Controller
         $validBalance = $user->valid_balance;
         $teamName = $user->team ? strtolower(trim($user->team->team_name ?? '')) : '';
 
-        // Vérifier d'abord si l'utilisateur n'a pas déjà un congé à la même date
-        $existingLeave = Leave::where('user_id', $user->id)
-            ->where('status_of_leave', '!=', 'rejected')
-            ->where(function($query) use ($transformedStartDay, $transformedEndDay) {
-                $query->whereBetween('start_day', [
-                        $transformedStartDay->format('Y-m-d'), 
-                        $transformedEndDay->format('Y-m-d')
-                    ])
-                    ->orWhereBetween('end_day', [
-                        $transformedStartDay->format('Y-m-d'), 
-                        $transformedEndDay->format('Y-m-d')
-                    ])
-                    ->orWhere(function($q) use ($transformedStartDay, $transformedEndDay) {
-                        $q->where('start_day', '<=', $transformedStartDay->format('Y-m-d'))
-                          ->where('end_day', '>=', $transformedEndDay->format('Y-m-d'));
-                    });
-            })
-            ->exists();
 
-        // if ($existingLeave) {
-        //     return response()->json([
-        //         'message' => "Vous avez déjà une demande de congé en attente ou approuvée pour cette période."
-        //     ], 422);
-        // }
-
-        // Ensuite vérifier les chevauchements avec les autres utilisateurs
+        // Then check for overlaps with other users
         $overlappingLeaves = Leave::where('user_id', '!=', $user->id)
             ->where('status_of_leave', '!=', 'rejected')
             ->where(function($query) use ($transformedStartDay, $transformedEndDay) {
@@ -124,9 +100,8 @@ class LeaveController extends Controller
             ->get();
 
         if ($overlappingLeaves->isNotEmpty()) {
-            return back()->with([
-                'error' => 'Un employé a déjà un congé approuvé pendant cette période.',
-                'overlap' => true
+            return redirect()->back()->withErrors([
+                'message' => 'An employee already has an approved leave during this period.'
             ]);
         }
 
@@ -151,32 +126,32 @@ class LeaveController extends Controller
                 case 'vacation':
                     if ($teamName !== 'softtodo') {
                         $leaveService->approve($leave->id);
-                        $message = 'Demande de congé soumise et approuvée avec succès.';
+                        $message = 'Leave request submitted and approved successfully.';
                         $isApproved = true;
                     } else {
-                        $message = 'Demande de congé soumise avec succès.';
+                        $message = 'Leave request submitted successfully.';
                     }
                     break;
 
                 case 'authorisation':
                     if ($teamName !== 'softtodo') {
                         $leaveService->approve($leave->id);
-                        $message = 'Demande d\'autorisation soumise et approuvée avec succès.';
+                        $message = 'Authorization request submitted and approved successfully.';
                         $isApproved = true;
                     } else {
-                        $message = 'Demande d\'autorisation soumise avec succès.';
+                        $message = 'Authorization request submitted successfully.';
                     }
                     break;
 
                 default:
                     if ($teamName !== 'softtodo' && $validBalance >= $numberOfDays) {
                         $leaveService->approve($leave->id);
-                        $message = 'Demande de congé soumise et approuvée avec succès.';
+                        $message = 'Leave request submitted and approved successfully.';
                         $isApproved = true;
                     } else {
                         $message = $validBalance < $numberOfDays 
-                            ? 'Solde de congé insuffisant. La demande a été soumise mais nécessite une validation.'
-                            : 'Demande de congé soumise avec succès.';
+                            ? 'Insufficient leave balance. The request has been submitted but requires validation.'
+                            : 'Leave request submitted successfully.';
                     }
             }
 
@@ -187,7 +162,7 @@ class LeaveController extends Controller
 
         } catch (\Exception $e) {
             \Log::error('Error creating leave request: ' . $e->getMessage());
-            return back()->with('error', 'Une erreur est survenue lors de la soumission de la demande de congé.');
+            return back()->with('error', 'An error occurred while submitting the leave request.');
         }
     }
 
@@ -202,13 +177,9 @@ class LeaveController extends Controller
 
         try {
             $leaveService->approve($request['id']);
-            return Inertia::render('Leaves/Index', [
-                'success' => 'Leave approved successfully.'
-            ]);
+            return redirect()->route('leave.index')->with('success', 'Leave approved successfully.');
         } catch (Exception $e) {
-            return Inertia::render('Leaves/Index', [
-                'error' => $e->getMessage()
-            ]);
+            return redirect()->back()->with('error', $e->getMessage());
         }
     }
 
@@ -224,9 +195,7 @@ class LeaveController extends Controller
         $leave->save();
         Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'rejected', $leaveReason));
 
-        return Inertia::render('Leaves/Index', [
-            'success' => 'Leave request rejected successfully.'
-        ]);
+        return to_route('leave.index')->with('success', 'Leave request rejected successfully.');
     }
 
     public function delete()
@@ -254,8 +223,30 @@ class LeaveController extends Controller
         $user->save();
         $leave->delete();
 
-        return Inertia::render('Leaves/Index', [
-            'success' => 'Leave request deleted successfully. Balance updated.'
-        ]);
+        return to_route('leave.index')->with('success', 'Leave request deleted successfully. Balance updated.');
     }
+  
+    public function cancel(Request $request)
+    {
+        $leave = Leave::find($request->id);
+
+        if (!$leave) {
+            return back()->with('error', 'Leave request not found.');
+        }
+
+        $user = Auth::user();
+
+        if ($user->id !== $leave->user_id && !$user->hasAnyRole(['admin', 'project_manager'])) {
+            return back()->with('error', 'You are not authorized to cancel this leave request.');
+        }
+
+        if ($leave->status_of_leave !== 'pending') {
+            return back()->with('error', 'This leave request cannot be cancelled as it has already been processed.');
+        }
+
+        $leave->delete();
+
+        return back()->with('success', 'Leave request cancelled successfully.');
+    }
+
 }
