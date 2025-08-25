@@ -955,7 +955,7 @@ disabledDates() {
                                         <!-- Pending Actions -->
                                         <template v-if="slotProps.data.status_of_leave === 'pending'">
                                             <!-- Admin/PM can approve or reject -->
-                                            <template v-if="isAdmin || isProjectManager">
+                                            <template v-if="isAdmin">
                                                 <PrimaryButton 
                                                     @click="approveLeave(slotProps.data.id)"
                                                     class="bg-blue-600 text-white"
