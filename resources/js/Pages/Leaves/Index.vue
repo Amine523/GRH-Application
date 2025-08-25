@@ -991,7 +991,7 @@ disabledDates() {
                                         </template>
 
                                         <!-- Remove button always visible for admin/pm -->
-                                        <template v-if="isAdmin || isProjectManager">
+                                        <template v-if="isAdmin">
                                             <PrimaryButton 
                                                 @click="deleteLeave(slotProps.data.id)"
                                                 class="bg-gray-600 text-white"
