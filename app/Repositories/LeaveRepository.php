@@ -28,7 +28,7 @@ class LeaveRepository
         ];
 
         if ($data->type_of_leave === 'authorisation') {
-            $leaveData['authorization_hour'] = (float)$data->authorization_hour;
+            $leaveData['authorization_hour'] = (float) $data->authorization_hour;
             $leaveData['end_time'] = $endTime;
         }
 

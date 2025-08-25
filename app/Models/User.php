@@ -57,7 +57,7 @@ class User extends Authenticated
         if (!$this->isProjectManager()) {
             return collect();
         }
-        
+
         return Team::where('project_manager_id', $this->id)->get();
     }
 
@@ -67,7 +67,7 @@ class User extends Authenticated
     public function teams()
     {
         return Team::where('project_manager_id', $this->id)
-            ->orWhereJsonContains('employee_ids', (string)$this->id)
+            ->orWhereJsonContains('employee_ids', (string) $this->id)
             ->orWhereJsonContains('employee_ids', $this->id)
             ->get();
     }
@@ -78,6 +78,30 @@ class User extends Authenticated
     public function isProjectManager(): bool
     {
         return $this->hasRole('project_manager');
+    }
+
+    /**
+     * Check if user has admin role
+     */
+    public function isAdmin(): bool
+    {
+        return $this->hasRole('admin');
+    }
+
+    /**
+     * Check if user has project manager role
+     */
+    public function isProjectManagerRole(): bool
+    {
+        return $this->hasRole('project_manager') || $this->hasRole('project manager');
+    }
+
+    /**
+     * Check if user has team leader role
+     */
+    public function isTeamLeader(): bool
+    {
+        return $this->hasRole('team_leader') || $this->hasRole('team leader');
     }
 
     public function leaves()
@@ -105,7 +129,7 @@ class User extends Authenticated
             get: fn() => $this->profile ? "{$this->profile->first_name} {$this->profile->last_name}" : null,
         );
     }
- 
+
 }
 
 //     public function teams(){

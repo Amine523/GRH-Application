@@ -164,13 +164,32 @@ class ProjectController extends Controller
      */
     public function edit(Project $project)
     {
-        $this->authorize('update', $project);
+        $user = Auth::user()->load('roles');
+        
+        // Check if user is admin, project manager, or the manager of this project
+        $isManager = $user->id === $project->manager_id;
+        $hasAccess = $user->hasRole('admin') || $user->hasRole('project_manager') || $isManager;
+        
+        if (!$hasAccess) {
+            abort(403, 'You do not have permission to edit this project.');
+        }
 
-        $project->load(['manager.profile', 'members']);
+        $project->load(['manager.profile']);
+        
+        // Load project members
+        $memberIds = $project->member_ids ?? [];
+        $project->members = !empty($memberIds) 
+            ? User::with('profile')->whereIn('id', $memberIds)->get()
+            : collect();
 
         return Inertia::render('Project/Edit', [
             'project' => $project,
             'users' => User::with('profile')->get(),
+            'auth' => [
+                'user' => $user,
+                'user_roles' => $user->roles->pluck('name'),
+                'profile' => $user->profile,
+            ],
         ]);
     }
 
@@ -179,7 +198,16 @@ class ProjectController extends Controller
      */
     public function update(Request $request, Project $project)
     {
-        $this->authorize('update', $project);
+        // Log the user and project for debugging
+        \Log::info('Update Project - User ID: ' . auth()->id() . ', Project ID: ' . $project->id);
+        \Log::info('Request Data: ' . json_encode($request->all()));
+
+        try {
+            $this->authorize('update', $project);
+        } catch (\Exception $e) {
+            \Log::error('Authorization failed: ' . $e->getMessage());
+            throw $e;
+        }
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',

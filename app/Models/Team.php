@@ -14,17 +14,17 @@ class Team extends Model
         'project_manager_id',
         'employee_ids'
     ];
-    
+
     protected $casts = [
         'employee_ids' => 'array',
     ];
-    
+
     // Map 'name' to 'team_name' for backward compatibility
     public function getNameAttribute()
     {
         return $this->team_name;
     }
-    
+
     public function setNameAttribute($value)
     {
         $this->attributes['team_name'] = $value;
@@ -43,7 +43,7 @@ class Team extends Model
         $userIds = is_array($this->employee_ids) ? $this->employee_ids : [];
         return User::whereIn('id', $userIds);
     }
-    
+
     /**
      * Alias for backward compatibility
      */
@@ -51,7 +51,7 @@ class Team extends Model
     {
         return $this->users();
     }
-    
+
     /**
      * Alias pour la rétrocompatibilité
      */
@@ -67,7 +67,7 @@ class Team extends Model
     {
         return $this->members()->load('profile');
     }
-    
+
     /**
      * Vérifie si un utilisateur est membre de l'équipe
      */

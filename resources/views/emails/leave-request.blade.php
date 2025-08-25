@@ -55,18 +55,21 @@
                         <p>Bonjour,</p>
                         <p>Une nouvelle demande de congé a été soumise par <strong>{{ $firstName }}</strong>.</p>
 
-                        <p><strong>Durée :</strong>
-                            @if(!empty($leaveDuration))
-                                {{ $leaveDuration }} jour(s)
-                            @else
-                                Non spécifiée
-                            @endif
-                        </p>
+                        @if(!empty($leaveDuration))
+                            <p><strong>Durée :</strong> {{ $leaveDuration }} jour(s)</p>
+                        @endif
 
-                        <p><strong>Date de début
-                                :</strong> {{ \Carbon\Carbon::parse($leave->start_date)->format('Y-m-d') }}</p>
-                        <p><strong>Date de fin :</strong> {{ \Carbon\Carbon::parse($leave->end_date)->format('Y-m-d') }}
-                        </p>
+                        @if(isset($startDate) && $startDate)
+                            <p><strong>Date de début :</strong> {{ \Carbon\Carbon::parse($startDate)->format('d/m/Y') }}</p>
+                        @endif
+
+                        @if(isset($endDate) && $endDate)
+                            <p><strong>Date de fin :</strong> {{ \Carbon\Carbon::parse($endDate)->format('d/m/Y') }}</p>
+                        @endif
+
+                        @if(isset($reason) && $reason)
+                            <p><strong>Raison :</strong> {{ $reason }}</p>
+                        @endif
 
                         <p>Merci de prendre en compte cette demande.</p>
 

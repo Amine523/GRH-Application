@@ -146,12 +146,16 @@ const removeMember = (index) => {
 
 const submit = () => {
   form.post(route('teams.store'), {
-    onSuccess: () => {
-      // Redirect to teams index page after successful creation
-      router.visit(route('teams.index'), {
-        only: ['teams'],
-        preserveScroll: true,
-      });
+    onSuccess: (response) => {
+      // The team ID is in the response data
+      const teamId = response.props.team?.id;
+      if (teamId) {
+        // Redirect to the newly created team's page
+        router.visit(route('teams.index', teamId));
+      } else {
+        // Fallback to teams index if team ID is not available
+        router.visit(route('teams.index'));
+      }
     },
     onError: (errors) => {
       console.error('Error while creating team:', errors);

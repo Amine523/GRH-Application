@@ -17,9 +17,9 @@ class LeaveRequestMail extends Mailable
     public $content;
     public $recipientName;
 
-    public function __construct(string $fullName, string $type, $leave = null, string $recipientName = null)
+    public function __construct(?string $fullName = null, string $type, $leave = null, string $recipientName = null)
     {
-        $this->fullName = $fullName;
+        $this->fullName = $fullName ?? 'User';
         $this->type = $type;
         $this->leave = $leave;
         $this->recipientName = $recipientName;
@@ -48,7 +48,7 @@ class LeaveRequestMail extends Mailable
                 $this->content = "<p>Votre demande de <strong>$leaveTypeLabel</strong> a été refusée pour la raison suivante :
                                   <strong>" . ($this->leave?->leaveReason ?? 'Non spécifiée') . "</strong>.</p>";
                 break;
-                
+
             case 'pm-notification':
                 $this->subject = "Nouvelle demande de $leaveTypeLabel - {$this->fullName}";
                 $this->content = "<p>Une nouvelle demande de <strong>$leaveTypeLabel</strong> a été soumise par <strong>{$this->fullName}</strong>.</p>

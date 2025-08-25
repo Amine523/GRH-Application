@@ -7,17 +7,13 @@ use App\Mail\LeaveRequestMail;
 use App\Models\Leave;
 use App\Models\Team;
 use App\Models\User;
-use App\Models\Holiday;
 use App\Repositories\LeaveRepository;
-use App\Services\LeaveNotificationService;
-use App\Services\LeaveService;
 use Carbon\Carbon;
 use Exception;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Services\LeaveService;
 
 class LeaveController extends Controller
 {
@@ -30,130 +26,174 @@ class LeaveController extends Controller
 
     public function index(): Response
     {
-        $user = auth()->user()->load('profile');
-        $leaves = collect();
-        $users = collect();
+        $user = auth()->user();
 
         if ($user->hasRole('admin')) {
-            $leaves = Leave::with(['user.profile'])
-                ->orderBy('start_day', 'desc')
-                ->get();
-            $users = User::with(['profile', 'team'])->get();
+            $leaves = Leave::with('user')->orderBy('id', 'desc')->get();
+            $users = User::with('profile')->get();
         } elseif ($user->hasRole('project_manager')) {
-            $managedTeams = Team::where('project_manager_id', $user->id)->get();
-
-            if ($managedTeams->isNotEmpty()) {
-                $userIds = $managedTeams->flatMap(function ($team) {
-                    return $team->employee_ids ?? [];
-                })->unique()->values()->all();
-
-                if (!in_array($user->id, $userIds)) {
-                    $userIds[] = $user->id;
-                }
-
-                $users = User::with(['profile', 'team'])
-                    ->whereIn('id', $userIds)
-                    ->get();
-
-                $leaves = Leave::with(['user.profile'])
-                    ->whereIn('user_id', $userIds)
-                    ->orderBy('start_day', 'desc')
-                    ->get();
-            } else {
-                $users = collect([$user]);
-                $leaves = Leave::with(['user.profile'])
+            $team = Team::with(['users.profile'])->find($user->team_id);
+            
+            if (!$team) {
+                // If no team is assigned, only show the manager's own leaves
+                $leaves = Leave::with('user')
                     ->where('user_id', $user->id)
-                    ->orderBy('start_day', 'desc')
+                    ->orderBy('id', 'desc')
+                    ->get();
+                $users = collect([$user]);
+            } else {
+                $users = $team->users;
+                $userIds = $users->pluck('id');
+                $leaves = Leave::with('user')
+                    ->whereIn('user_id', $userIds)
+                    ->orWhere('user_id', $user->id) // Also include the manager's own leaves
+                    ->orderBy('id', 'desc')
                     ->get();
             }
         } else {
-            $leaves = Leave::with(['user.profile'])
-                ->where('user_id', $user->id)
-                ->orderBy('start_day', 'desc')
-                ->get();
-            $users = collect([$user]);
+            $leaves = Leave::with('user')->where('user_id', $user->id)->orderBy('id', 'desc')->get();
+            $users = User::with('profile')->get();
         }
-
-        $teams = Team::all();
-        $teamsData = $teams->map(function ($team) {
-            return [
-                'id' => $team->id,
-                'team_name' => $team->team_name,
-                'employee_ids' => $team->employee_ids ?? [],
-                'project_manager_id' => $team->project_manager_id
-            ];
-        });
 
         return Inertia::render('Leaves/Index', [
             'leaves' => $leaves,
             'users' => $users,
-            'teams' => $teamsData,
-            'holidays' => Holiday::all(),
         ]);
     }
 
-    public function show($id)
-    {
-        $leave = Leave::with(['user.profile'])->findOrFail($id);
-        return Inertia::render('Leaves/Show', [
-            'leave' => $leave
-        ]);
-    }
-
+    /**
+     * @throws Exception
+     */
     public function store(LeaveRequest $leaveRequest, LeaveService $leaveService)
     {
-        $user = User::find($leaveRequest->user_id);
-        if (!$user) {
-            return back()->with('error', 'User not found.');
+        $transformedStartDay = Carbon::parse($leaveRequest->start_day);
+        $transformedEndDay = $leaveRequest->end_day
+            ? Carbon::parse($leaveRequest->end_day)
+            : $transformedStartDay;
+        $transformedstartTime = Carbon::parse($leaveRequest->start_time)->addHour(1)->format('H:i');
+        $numberOfDays = $this->leaveRepository->getWeekdaysBetween($transformedStartDay, $transformedEndDay);
+        $user = auth()->user();
+        $validBalance = $user->valid_balance;
+        $teamName = $user->team ? strtolower(trim($user->team->team_name ?? '')) : '';
+
+        // Vérifier d'abord si l'utilisateur n'a pas déjà un congé à la même date
+        $existingLeave = Leave::where('user_id', $user->id)
+            ->where('status_of_leave', '!=', 'rejected')
+            ->where(function($query) use ($transformedStartDay, $transformedEndDay) {
+                $query->whereBetween('start_day', [
+                        $transformedStartDay->format('Y-m-d'), 
+                        $transformedEndDay->format('Y-m-d')
+                    ])
+                    ->orWhereBetween('end_day', [
+                        $transformedStartDay->format('Y-m-d'), 
+                        $transformedEndDay->format('Y-m-d')
+                    ])
+                    ->orWhere(function($q) use ($transformedStartDay, $transformedEndDay) {
+                        $q->where('start_day', '<=', $transformedStartDay->format('Y-m-d'))
+                          ->where('end_day', '>=', $transformedEndDay->format('Y-m-d'));
+                    });
+            })
+            ->exists();
+
+        // if ($existingLeave) {
+        //     return response()->json([
+        //         'message' => "Vous avez déjà une demande de congé en attente ou approuvée pour cette période."
+        //     ], 422);
+        // }
+
+        // Ensuite vérifier les chevauchements avec les autres utilisateurs
+        $overlappingLeaves = Leave::where('user_id', '!=', $user->id)
+            ->where('status_of_leave', '!=', 'rejected')
+            ->where(function($query) use ($transformedStartDay, $transformedEndDay) {
+                $query->where(function($q) use ($transformedStartDay, $transformedEndDay) {
+                    $q->whereBetween('start_day', [
+                            $transformedStartDay->format('Y-m-d'), 
+                            $transformedEndDay->format('Y-m-d')
+                        ])
+                        ->orWhereBetween('end_day', [
+                            $transformedStartDay->format('Y-m-d'), 
+                            $transformedEndDay->format('Y-m-d')
+                        ])
+                        ->orWhere(function($q) use ($transformedStartDay, $transformedEndDay) {
+                            $q->where('start_day', '<=', $transformedStartDay->format('Y-m-d'))
+                              ->where('end_day', '>=', $transformedEndDay->format('Y-m-d'));
+                        });
+                });
+            })
+            ->with('user.profile')
+            ->get();
+
+        if ($overlappingLeaves->isNotEmpty()) {
+            return back()->with([
+                'error' => 'Un employé a déjà un congé approuvé pendant cette période.',
+                'overlap' => true
+            ]);
         }
 
-        $startDay = Carbon::parse($leaveRequest->start_day)->addDay();
-        $endDay = $leaveRequest->end_day
-            ? Carbon::parse($leaveRequest->end_day)->addDay()
-            : $startDay;
+        try {
+            // Create the leave request
+            $leave = $this->leaveRepository->createLeave($leaveRequest, $transformedStartDay, $transformedEndDay, $transformedstartTime);
 
-        if (Leave::hasTeamOverlap($startDay, $endDay, $user->id)) {
-            return back()->with('error', 'Another team member already has leave scheduled during this period.');
-        }
+            // Send notification email
+            Mail::to(['grh@softtodo.com', 'fatma.abid@softtodo.com'])
+                ->queue(new LeaveRequestMail(
+                    $user->first_name,
+                    'request',
+                    $leaveRequest->leave_reason,
+                    $numberOfDays
+                ));
 
-        if ($leaveRequest->type_of_leave === 'deduction') {
-            $leaveService->handleLateDeduction($user, $leaveRequest);
-            return to_route('leaves.index')->with('success', "Leave deduction has been saved.");
+            // Handle auto-approval based on leave type and team
+            $message = '';
+            $isApproved = false;
+
+            switch ($leaveRequest->type_of_leave) {
+                case 'vacation':
+                    if ($teamName !== 'softtodo') {
+                        $leaveService->approve($leave->id);
+                        $message = 'Demande de congé soumise et approuvée avec succès.';
+                        $isApproved = true;
+                    } else {
+                        $message = 'Demande de congé soumise avec succès.';
+                    }
+                    break;
+
+                case 'authorisation':
+                    if ($teamName !== 'softtodo') {
+                        $leaveService->approve($leave->id);
+                        $message = 'Demande d\'autorisation soumise et approuvée avec succès.';
+                        $isApproved = true;
+                    } else {
+                        $message = 'Demande d\'autorisation soumise avec succès.';
+                    }
+                    break;
+
+                default:
+                    if ($teamName !== 'softtodo' && $validBalance >= $numberOfDays) {
+                        $leaveService->approve($leave->id);
+                        $message = 'Demande de congé soumise et approuvée avec succès.';
+                        $isApproved = true;
+                    } else {
+                        $message = $validBalance < $numberOfDays 
+                            ? 'Solde de congé insuffisant. La demande a été soumise mais nécessite une validation.'
+                            : 'Demande de congé soumise avec succès.';
+                    }
+            }
+
+            // Redirect with success/error message
+            return redirect()->route('leaves.index')->with([
+                $isApproved ? 'success' : 'info' => $message
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error creating leave request: ' . $e->getMessage());
+            return back()->with('error', 'Une erreur est survenue lors de la soumission de la demande de congé.');
         }
     }
 
-    public function edit($id)
-    {
-        $leave = Leave::findOrFail($id);
-        $users = User::with(['profile', 'team'])->get();
-        $teams = Team::all();
-
-        return Inertia::render('Leaves/Edit', [
-            'leave' => $leave,
-            'users' => $users,
-            'teams' => $teams
-        ]);
-    }
-
-    public function update(LeaveRequest $request, $id)
-    {
-        $leave = Leave::findOrFail($id);
-
-        $leave->update([
-            'user_id' => $request->user_id,
-            'start_day' => $request->start_day,
-            'start_time' => $request->start_time,
-            'end_day' => $request->end_day,
-            'end_time' => $request->end_time,
-            'type_of_leave' => $request->type_of_leave,
-            'status_of_leave' => $request->status_of_leave,
-            'authorization_hour' => $request->authorization_hour,
-            'deduction_days' => $request->deduction_days
-        ]);
-
-        return redirect()->route('leaves.index')->with('success', 'Leave updated successfully.');
-    }
-
+    /**
+     * Approve a leave request.
+     */
     public function approve(LeaveService $leaveService)
     {
         $request = request()->validate([
@@ -162,9 +202,13 @@ class LeaveController extends Controller
 
         try {
             $leaveService->approve($request['id']);
-            return redirect()->route('leaves.index')->with('success', 'Leave approved successfully.');
+            return Inertia::render('Leaves/Index', [
+                'success' => 'Leave approved successfully.'
+            ]);
         } catch (Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+            return Inertia::render('Leaves/Index', [
+                'error' => $e->getMessage()
+            ]);
         }
     }
 
@@ -180,7 +224,9 @@ class LeaveController extends Controller
         $leave->save();
         Mail::to($leave->user->email)->send(new LeaveRequestMail($leave->user->profile->first_name, 'rejected', $leaveReason));
 
-        return to_route('leaves.index')->with('success', 'Leave request rejected successfully.');
+        return Inertia::render('Leaves/Index', [
+            'success' => 'Leave request rejected successfully.'
+        ]);
     }
 
     public function delete()
@@ -208,82 +254,8 @@ class LeaveController extends Controller
         $user->save();
         $leave->delete();
 
-        return to_route('leaves.index')->with('success', 'Leave request deleted successfully. Balance updated.');
-    }
-
-    public function cancel(Request $request)
-    {
-        $leave = Leave::find($request->id);
-
-        if (!$leave) {
-            return back()->with('error', 'Leave request not found.');
-        }
-
-        $user = Auth::user();
-
-        if ($user->id !== $leave->user_id && !$user->hasAnyRole(['admin', 'project_manager'])) {
-            return back()->with('error', 'You are not authorized to cancel this leave request.');
-        }
-
-        if ($leave->status_of_leave !== 'pending') {
-            return back()->with('error', 'This leave request cannot be cancelled as it has already been processed.');
-        }
-
-        $leave->delete();
-
-        return back()->with('success', 'Leave request cancelled successfully.');
-    }
-
-    /**
-     * Check for overlapping leave requests.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function checkOverlap(Request $request)
-    {
-        $request->validate([
-            'start_day' => 'required|date',
-            'end_day' => 'required|date|after_or_equal:start_day',
-            'user_id' => 'required|exists:users,id',
-        ]);
-
-        $startDay = Carbon::parse($request->start_day);
-        $endDay = Carbon::parse($request->end_day);
-        $userId = $request->user_id;
-
-        // Check for existing leaves that overlap with the requested dates
-        $overlappingLeaves = Leave::where('user_id', $userId)
-            ->where('status_of_leave', '!=', 'rejected')
-            ->where(function ($query) use ($startDay, $endDay) {
-                $query->whereBetween('start_day', [$startDay, $endDay])
-                    ->orWhereBetween('end_day', [$startDay, $endDay])
-                    ->orWhere(function ($q) use ($startDay, $endDay) {
-                        $q->where('start_day', '<=', $startDay)
-                            ->where('end_day', '>=', $endDay);
-                    });
-            })
-            ->get();
-
-        if ($overlappingLeaves->isNotEmpty()) {
-            $leaveDates = $overlappingLeaves->map(function ($leave) {
-                return [
-                    'start' => $leave->start_day->format('Y-m-d'),
-                    'end' => $leave->end_day->format('Y-m-d'),
-                    'type' => $leave->type_of_leave,
-                    'status' => $leave->status_of_leave
-                ];
-            });
-
-            return response()->json([
-                'is_overlapping' => true,
-                'overlap_message' => 'You already have leave requests during this period.',
-                'leaves' => $leaveDates
-            ]);
-        }
-
-        return response()->json([
-            'is_overlapping' => false
+        return Inertia::render('Leaves/Index', [
+            'success' => 'Leave request deleted successfully. Balance updated.'
         ]);
     }
 }

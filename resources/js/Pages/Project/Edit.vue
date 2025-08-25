@@ -26,9 +26,9 @@
                         <!-- Project Description -->
                         <div>
                             <InputLabel for="description" value="Description" />
-                            <TextArea
+                            <textarea
                                 id="description"
-                                class="mt-1 block w-full"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                 v-model="form.description"
                                 rows="4"
                             />
@@ -144,7 +144,6 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import TextArea from '@/Components/TextArea.vue';
 import ConfirmationModal from '@/Components/ConfirmationModal.vue';
 
 const props = defineProps({
@@ -185,7 +184,7 @@ const closeModal = () => {
 };
 
 const submit = () => {
-    form.put(route('projects.update', props.project.id), {
+    form.patch(route('projects.update', props.project.id), {
         preserveScroll: true,
         onSuccess: () => {},
     });

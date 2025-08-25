@@ -59,6 +59,8 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::get('/leaves', [LeaveController::class, 'index'])->name('leaves.index');
+    Route::get('/leaves/{leave}/edit', [LeaveController::class, 'edit'])->name('leaves.edit');
+    Route::put('/leaves/{leave}', [LeaveController::class, 'update'])->name('leaves.update');
     Route::post('/leaves', [LeaveController::class, 'store'])->name('leaves.store');
     Route::post('/Leave/approve', [\App\Http\Controllers\LeaveController::class, 'approve'])->name('leave.approve');
     Route::post('/Leave/refuse', [\App\Http\Controllers\LeaveController::class, 'refuse'])->name('leave.refuse');

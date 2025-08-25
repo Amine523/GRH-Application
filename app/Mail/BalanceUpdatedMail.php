@@ -25,7 +25,7 @@ class BalanceUpdatedMail extends Mailable
         return $this->subject('Your Balance Has Been Updated')
             ->view('emails.balance-updated')
             ->with([
-                'userName' => $this->user->profile->first_name,
+                'userName' => $this->user->profile ? $this->user->profile->first_name : $this->user->name,
                 'newBalance' => $this->newBalance,
             ]);
     }

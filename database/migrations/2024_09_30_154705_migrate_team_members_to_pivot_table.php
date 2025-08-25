@@ -6,8 +6,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 use App\Models\Team;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -74,8 +73,8 @@ return new class extends Migration
             DB::table('teams')
                 ->where('id', $team->id)
                 ->update([
-                    'employee_ids' => json_encode($employeeIds)
-                ]);
+                        'employee_ids' => json_encode($employeeIds)
+                    ]);
         }
     }
 };

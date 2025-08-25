@@ -127,7 +127,7 @@
     isAdmin: { type: Boolean, default: false },
     isProjectManager: { type: Boolean, default: false }
   })
-  
+
   const showDelete = ref(false)
   const projectToDelete = ref(null)
   const processing = ref(false)

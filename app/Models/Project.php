@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
@@ -47,11 +49,11 @@ class Project extends Model
     }
 
     /**
-     * Get all members of the project.
+     * The users that belong to the project.
      */
-    public function members()
+    public function members(): BelongsToMany
     {
-        return User::whereIn('id', $this->member_ids ?? [])->get();
+        return $this->belongsToMany(User::class, 'project_user');
     }
 
     /**
@@ -59,11 +61,17 @@ class Project extends Model
      */
     public function getAllMembersAttribute()
     {
-        $members = $this->members();
-        if (!$members->contains('id', $this->manager_id)) {
-            $members->push($this->manager);
-        }
-        return $members;
+        return $this->members->merge([$this->manager])->unique('id');
+    }
+
+    /**
+     * Get all members of the project.
+     */
+    public function users()
+    {
+        $memberIds = $this->member_ids ?? [];
+        return User::whereIn('id', $memberIds)
+            ->orWhere('id', $this->manager_id);
     }
 
     /**
@@ -72,7 +80,7 @@ class Project extends Model
     public function isMember(User $user): bool
     {
         return $this->manager_id === $user->id || 
-               in_array($user->id, $this->member_ids ?? []);
+               $this->users->contains($user->id);
     }
 
     /**
@@ -81,7 +89,9 @@ class Project extends Model
     public function scopeForUser($query, User $user)
     {
         return $query->where('manager_id', $user->id)
-            ->orWhereJsonContains('member_ids', $user->id);
+            ->orWhereHas('users', function ($query) use ($user) {
+                $query->where('id', $user->id);
+            });
     }
 
     /**
@@ -138,83 +148,10 @@ class Project extends Model
     }
 
     /**
-     * Vérifie s'il y a un conflit de congés entre les membres du projet pour une période donnée
-     *
-     * @param int $userId ID de l'utilisateur qui demande le congé
-     * @param string $startDate Date de début du congé (format Y-m-d)
-     * @param string $endDate Date de fin du congé (format Y-m-d)
-     * @return array Retourne un tableau avec 'has_conflict' (bool) et 'conflicting_users' (array)
+     * Get the leaves associated with the project.
      */
-    public function checkLeaveConflict(int $userId, string $startDate, string $endDate): array
-    {
-        $memberIds = $this->member_ids ?? [];
-        
-        // Exclure l'utilisateur actuel de la vérification
-        $memberIds = array_diff($memberIds, [$userId]);
-        
-        if (empty($memberIds)) {
-            return [
-                'has_conflict' => false,
-                'conflicting_users' => []
-            ];
-        }
-
-        $startDate = Carbon::parse($startDate);
-        $endDate = Carbon::parse($endDate);
-
-        // Récupérer les congés des autres membres du projet qui chevauchent la période demandée
-        $conflictingLeaves = Leave::whereIn('user_id', $memberIds)
-            ->where(function($query) use ($startDate, $endDate) {
-                $query->whereBetween('start_day', [$startDate, $endDate])
-                    ->orWhereBetween('end_day', [$startDate, $endDate])
-                    ->orWhere(function($q) use ($startDate, $endDate) {
-                        $q->where('start_day', '<=', $startDate)
-                            ->where('end_day', '>=', $endDate);
-                    });
-            })
-            ->where('status_of_leave', 'approved')
-            ->with('user.profile')
-            ->get();
-
-        if ($conflictingLeaves->isEmpty()) {
-            return [
-                'has_conflict' => false,
-                'conflicting_users' => []
-            ];
-        }
-
-        // Formater les informations sur les conflits
-        $conflictingUsers = [];
-        foreach ($conflictingLeaves as $leave) {
-            $conflictingUsers[] = [
-                'id' => $leave->user->id,
-                'name' => $leave->user->profile->first_name . ' ' . $leave->user->profile->last_name,
-                'start_date' => $leave->start_day->format('d/m/Y'),
-                'end_date' => $leave->end_day->format('d/m/Y'),
-                'type' => $leave->type_of_leave
-            ];
-        }
-
-        return [
-            'has_conflict' => true,
-            'conflicting_users' => $conflictingUsers
-        ];
-    }
-
-    /**
-     * Check if the project is active.
-     */
-    public function isActive(): bool
-    {
-        return in_array($this->status, ['planning', 'in_progress']);
-    }
-
-    /**
-     * Get the project's progress percentage.
-     */
-    public function getProgressPercentage(): int
-    {
-        // À implémenter selon les besoins spécifiques
-        return 0;
-    }
+    // public function leaves(): HasMany
+    // {
+    //     return $this->hasMany(Leave::class);
+    // }
 }

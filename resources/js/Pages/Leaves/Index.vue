@@ -147,7 +147,7 @@ export default {
                 start_time: new Date('1970-01-01T08:00:00'),
                 end_day: null,
                 session: null,
-                authorisation_hour: 0,
+                authorisation_hour: 0.5,
                 reason: '',
                 team_user: null,
                 user_id: null,
@@ -164,6 +164,11 @@ export default {
                 start_date: '',
                 end_date: '',
             }),
+            hasOverlap: false,
+        isCheckingOverlap: false,
+        isCheckingOverlap: false,
+        isButtonDisabled: false,
+         
         }
     },
     props: {
@@ -183,6 +188,7 @@ isHolidayDate() {
             return targetDate >= startDate && targetDate <= endDate;
         });
     };
+  
 },
 disabledHolidayDates() {
     const disabledDates = [];
@@ -246,11 +252,13 @@ disabledDates() {
         },
         approvedLeaves () {
             const events = []
-            this.users = this.$attrs.users
-            this.mappedUsers = this.mapToOptions(this.users, ['profile.first_name', 'profile.last_name'], 'id')
-            // Ajouter les congés approuvés
-            this.localLeaves
-                .filter(leave => leave.status_of_leave.toLowerCase() === 'approved')
+            this.users = this.$attrs.users || []
+            this.mappedUsers = this.users?.length ? this.mapToOptions(this.users, ['profile.first_name', 'profile.last_name'], 'id') : []
+            
+            // Add approved leaves
+            const leaves = Array.isArray(this.localLeaves) ? this.localLeaves : [];
+            leaves
+                .filter(leave => leave?.status_of_leave?.toLowerCase() === 'approved')
                 .forEach(leave => {
                     const user = this.users?.find(u => u?.id === leave?.user_id) || null
                     let userName = 'Unknown User'
@@ -366,7 +374,8 @@ disabledDates() {
             return [...events, ...holidayEvents];
         },
         mappedLeaves () {
-            return this.leaves.map(leave => {
+            const leaves = Array.isArray(this.leaves) ? this.leaves : [];
+            return leaves.map(leave => {
                 const user = this.users?.find(user => user?.id === leave?.user_id) || {};
                 const profile = user?.profile || {};
                 const firstName = profile?.first_name || 'Unknown';
@@ -565,7 +574,7 @@ disabledDates() {
             })
         },
         refreshLeaves () {
-            router.visit(route('leave.index'), {
+            router.visit(route('leaves.index'), {
                 only: ['leaves'],
                 preserveScroll: true,
                 preserveState: true,
@@ -575,6 +584,7 @@ disabledDates() {
             })
         },
         mapToOptions (items, labelFields, valueField = 'id') {
+            if (!Array.isArray(items)) return [];
             return items.map(item => ({
                 value: item[valueField],
                 label: Array.isArray(labelFields)
@@ -608,7 +618,11 @@ disabledDates() {
             return field.split('.').reduce((obj, key) => obj && obj[key], item)
         },
         openDialog () {
-            this.showDialog = true
+            // Effacer les messages d'erreur précédents
+            if (this.$page.props.flash) {
+                this.$page.props.flash.error = null;
+            }
+            this.showDialog = true;
         },
         openHistoryDialog () { 
             this.showHistoryDialog = true
@@ -617,10 +631,13 @@ disabledDates() {
             this.refusedLeave = id
             this.showRefuseDialog = true
         },
-        closeDialog () {
-            this.showDialog = false
-            this.showRefuseDialog = false
-            this.showHistoryDialog = false
+        closeDialog() {
+            this.showDialog = false;
+            this.leaveForm.reset();
+            // Effacer le message d'erreur
+            if (this.$page.props.flash) {
+                this.$page.props.flash.error = null;
+            }
         },
         getStartTime () {
             switch (this.leaveForm.type_of_leave) {
@@ -686,6 +703,51 @@ disabledDates() {
                 onSuccess: () => this.closeModal(),
             });
         },
+        submitLeaveRequest() {
+            this.processingLeaveRequest = true;
+            
+            if (!this.leaveForm.user_id) {
+                this.leaveForm.user_id = this.$page.props.auth.user.id;
+            }
+            
+            if (!this.leaveForm.end_day) {
+                this.leaveForm.end_day = this.leaveForm.start_day;
+            }
+            
+            if (this.leaveForm.type_of_leave === 'halfday') {
+                this.leaveForm.start_time = this.leaveForm.session === 'morning' ? '08:00' : '13:00';
+                this.leaveForm.end_time = this.leaveForm.session === 'morning' ? '12:00' : '17:00';
+            }
+            
+            if (this.leaveForm.type_of_leave === 'authorisation' && !this.leaveForm.authorisation_hour) {
+                this.toast.error('Veuillez sélectionner le nombre d\'heures d\'autorisation');
+                this.processingLeaveRequest = false;
+                this.isButtonDisabled = true;
+                return;
+            }
+            
+            this.leaveForm.post(route('leaves.store'), {
+                preserveScroll: true,
+                onSuccess: () => {
+                    this.processingLeaveRequest = false
+                    this.isButtonDisabled = false;
+                },
+                onError: (errors) => {
+            if (errors.message) {
+                this.overlapWarning = errors.message;
+                this.$page.props.flash = { error: errors.message };
+                this.hasOverlap = true;
+                this.isButtonDisabled = true;
+            }
+            this.processingLeaveRequest = false;
+        },
+                onFinish: () => {
+                    this.processingLeaveRequest = false;
+                    this.isButtonDisabled = false;
+                }
+            });
+        },
+    
         // Méthode appelée lors du clic sur une cellule du calendrier
         onCellClick(args) {
             // Vérifier si la date cliquée est un jour férié
@@ -707,58 +769,14 @@ disabledDates() {
                 this.$refs.dt.first = 0; // Reset to first page
             }
         },
-        /**
-         * Vérifie s'il y a un chevauchement de congés pour la période sélectionnée
-         * @param {Object} dateInfo - Les informations de date sélectionnées
-         */
-        checkOverlap(dateInfo) {
-            if (!dateInfo || !this.leaveForm.start_day || !this.leaveForm.end_day) {
-                this.overlapWarning = null;
-                return;
-            }
-
-            const startDate = new Date(this.leaveForm.start_day);
-            const endDate = new Date(this.leaveForm.end_day);
-            
-            // Vérifier les chevauchements avec les congés existants
-            const hasOverlap = this.approvedLeaves.some(leave => {
-                if (leave.status_of_leave !== 'approved') return false;
-                
-                const leaveStart = new Date(leave.start_day);
-                const leaveEnd = new Date(leave.end_day || leave.start_day);
-                
-                // Vérifier si les périodes se chevauchent
-                return (
-                    (startDate >= leaveStart && startDate <= leaveEnd) ||
-                    (endDate >= leaveStart && endDate <= leaveEnd) ||
-                    (startDate <= leaveStart && endDate >= leaveEnd)
-                );
-            });
-
-            if (hasOverlap) {
-                this.overlapWarning = "Attention: La période sélectionnée chevauche un congé existant.";
-            } else {
-                this.overlapWarning = null;
-            }
-        },
     },
     watch: {
         approvedLeaves: {
             handler (newLeaves) {
-                this.localLeaves = [...newLeaves];
-                // Vérifier à nouveau les chevauchements quand la liste des congés change
-                if (this.leaveForm.start_day || this.leaveForm.end_day) {
-                    this.checkOverlap();
-                }
+                this.eventSettings = { ...this.eventSettings, dataSource: newLeaves }
             },
             deep: true,
             immediate: true
-        },
-        'leaveForm.start_day': function(newVal) {
-            if (newVal) this.checkOverlap();
-        },
-        'leaveForm.end_day': function(newVal) {
-            if (newVal) this.checkOverlap();
         }
     },
 }
@@ -794,16 +812,22 @@ disabledDates() {
                                 class="is-square is-pink-square"></span> Holidays
                             </div>
                         </div>
-                        <PrimaryButton @click="openHistoryDialog" class="bg-yellow-400 text-white">
-                            Leave History
-                        </PrimaryButton>
-                        <PrimaryButton v-if="isAdmin" @click="openAddHolidayDialog" class="bg-orange-600 text-white">
-                            Add Holiday
-                        </PrimaryButton>
-                        <PrimaryButton @click="openDialog" class="bg-green-600 text-white">
-                            Add Leave Request
-                        </PrimaryButton>
-                      
+                        <div class="flex flex-col items-end gap-2">
+                            <div v-if="$page.props.flash?.error" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-2 rounded">
+                                <p class="font-medium">{{ $page.props.flash.error }}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <PrimaryButton @click="openHistoryDialog" class="bg-yellow-400 text-white">
+                                    Leave History
+                                </PrimaryButton>
+                                <PrimaryButton v-if="isAdmin" @click="openAddHolidayDialog" class="bg-orange-600 text-white">
+                                    Add Holiday
+                                </PrimaryButton>
+                                <PrimaryButton @click="openDialog" class="bg-green-600 text-white">
+                                    Add Leave Request
+                                </PrimaryButton>
+                            </div>
+                        </div>
                     </div>
                     <ejs-schedule
                         :event-settings="eventSettings"
@@ -966,58 +990,24 @@ disabledDates() {
       
         
         <Dialog
-            v-model:visible="showHistoryDialog"
-            :closable="true"
-            :modal="true"
-            header="My Leave History"
-            class="rounded-lg shadow-lg p-5 bg-white w-[95%] sm:w-[80%] md:w-[70%] lg:w-[60%] max-w-4xl mx-auto"
-        >
-            <DataTable :value="userLeaveHistory" :rows="5" :paginator="true" responsiveLayout="scroll">
-                <Column field="start_day" header="Start Day" :sortable="true"></Column>
-                <Column field="end_day" header="End Day" :sortable="true"></Column>
-                <Column field="type_of_leave" header="Type" :sortable="true"></Column>
-                <Column field="authorization_hours" header="Authorisation Hours" :sortable="true">
-                    <template #body="slotProps">
-                        <span v-if="slotProps.data.type_of_leave === 'authorisation'">
-                            {{ parseFloat(slotProps.data.authorization_hours).toFixed(2) }}h ({{ slotProps.data.start_time }} - {{ slotProps.data.end_time }})
-                        </span>
-                    </template>
-                </Column>
-                <Column field="status_of_leave" header="Status" :sortable="true">
-                    <template #body="slotProps">
-                        <Tag v-if="slotProps.data.status_of_leave === 'approved'" severity="success" value="Approved"/>
-                        <Tag v-else-if="slotProps.data.status_of_leave === 'pending'" severity="warn" value="Pending"/>
-                        <Tag v-else severity="danger" value="Refused"/>
-                    </template>
-                </Column>
-            </DataTable>
-        </Dialog>
-        <Dialog
             v-model:visible="showDialog"
             :closable="true"
             :modal="true"
             header="Leave Request"
-            @close="closeDialog"
+            @hide="closeDialog"
             class="rounded-lg shadow-lg p-5 bg-white w-[95%] sm:w-[80%] md:w-[60%] lg:w-[50%] max-w-3xl mx-auto"
         >
-            <div class="space-y-4">
-                <!-- Message d'avertissement pour les chevauchements -->
-                <div v-if="overlapWarning" class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                            </svg>
-                        </div>
-                        <div class="ml-3">
-                            <h3 class="text-sm font-medium text-red-800">Attention - Chevauchement détecté</h3>
-                            <div class="mt-2 text-sm text-red-700">
-                                {{ overlapWarning }}
-                            </div>
-                        </div>
-                    </div>
+            <!-- Message d'erreur -->
+            <div v-if="$page.props.flash?.error" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded">
+                <div class="flex items-center">
+                    <svg class="h-5 w-5 text-red-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{{ $page.props.flash.error }}</span>
                 </div>
+            </div>
 
+            <div class="space-y-4">
                 <section>
                     <h3 class="text-lg font-medium mb-2">Leave Type</h3>
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -1140,20 +1130,33 @@ disabledDates() {
                     </section>
                 </template>
 
-                <div class="flex justify-end gap-3 mt-4">
+                <div class="flex justify-end gap-3 mt-6">
                     <button
-                        @click="submitLeaveRequest"
-                        :disabled="processingLeaveRequest"
-                        class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200
-                        disabled:opacity-50 disabled:cursor-not-allowed">
-                        Request Leave
+                        type="button"
+                        @click="closeDialog"
+                        class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition duration-200"
+                    >
+                        Annuler
                     </button>
                     <button
-                        @click="closeDialog"
-                        class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition duration-200">
-                        Close
+                        type="button"
+                        @click="submitLeaveRequest"
+                        :disabled="processingLeaveRequest || isCheckingOverlap || hasOverlap || !leaveForm.type_of_leave || !leaveForm.start_day || (leaveForm.type_of_leave === 'halfday' && !leaveForm.session) || (leaveForm.type_of_leave === 'authorisation' && !leaveForm.start_time)"
+                        :class="{
+                            'opacity-50 cursor-not-allowed': hasOverlap || isCheckingOverlap,
+                            'bg-blue-500 hover:bg-blue-600 text-white': !hasOverlap && !isCheckingOverlap,
+                            'bg-gray-300': hasOverlap || isCheckingOverlap
+                        }"
+                        class="px-4 py-2 rounded-lg transition duration-200"
+                    >
+                        <span v-if="processingLeaveRequest || isCheckingOverlap" class="flex items-center">
+                            <i class="pi pi-spin pi-spinner mr-2"></i> {{ isCheckingOverlap ? 'Vérification...' : 'Traitement...' }}
+                        </span>
+                        <span v-else-if="hasOverlap">Demande non disponible</span>
+                        <span v-else>Demander un congé</span>
                     </button>
                 </div>
+
             </div>
         </Dialog>
         <Dialog
@@ -1254,4 +1257,3 @@ disabledDates() {
                  :is-full-page="true"/>
     </AuthenticatedLayout>
 </template>
-

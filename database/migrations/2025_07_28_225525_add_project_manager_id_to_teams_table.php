@@ -11,9 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('teams', function (Blueprint $table) {
-            $table->foreignId('project_manager_id')->nullable()->constrained('users')->onDelete('set null');
-        });
+        if (!Schema::hasColumn('teams', 'project_manager_id')) {
+            Schema::table('teams', function (Blueprint $table) {
+                $table->foreignId('project_manager_id')
+                    ->nullable()
+                    ->constrained('users')
+                    ->onDelete('set null');
+            });
+        }
     }
 
     /**
@@ -21,9 +26,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('teams', function (Blueprint $table) {
-            $table->dropForeign(['project_manager_id']);
-            $table->dropColumn('project_manager_id');
-        });
+        if (Schema::hasColumn('teams', 'project_manager_id')) {
+            Schema::table('teams', function (Blueprint $table) {
+                $table->dropForeign(['project_manager_id']);
+                $table->dropColumn('project_manager_id');
+            });
+        }
     }
 };

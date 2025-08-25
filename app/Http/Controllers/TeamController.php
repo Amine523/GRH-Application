@@ -39,6 +39,8 @@ class TeamController extends Controller
             ? User::role('user')->with('profile')->orderBy('email')->get()
             : collect();
 
+        $canCreateTeam = $user->hasAnyRole(['admin', 'project_manager']);
+        
         return Inertia::render('Teams/Index', [
             'teams' => $teams,
             'users' => $users,
@@ -48,6 +50,10 @@ class TeamController extends Controller
                 'profile' => $user->profile,
             ],
             'isAdmin' => $isAdmin,
+            'isProjectManager' => $user->hasRole('project_manager'),
+            'can' => [
+                'createTeam' => $canCreateTeam,
+            ],
         ]);
     }
 
@@ -183,38 +189,38 @@ class TeamController extends Controller
         $team->employee_ids = $updatedEmployeeIds;
 
         if ($team->save()) {
-            $message = count($newMemberIds) > 1 
-                ? 'Members added successfully' 
+            $message = count($newMemberIds) > 1
+                ? 'Members added successfully'
                 : 'Member added successfully';
-                
+
             if ($request->wantsJson()) {
                 return response()->json([
                     'message' => $message,
                     'status' => 'success'
                 ]);
             }
-            
+
             return back()->with('success', $message);
         }
 
         $error = 'Failed to save team members';
-        
+
         if ($request->wantsJson()) {
             return response()->json([
                 'message' => $error,
                 'status' => 'error'
             ], 500);
         }
-        
+
         return back()->with('error', $error);
     }
 
     public function removeMember(Team $team, User $user)
     {
         $employeeIds = $team->employee_ids ?? [];
-        $userId = (int)$user->id;
+        $userId = (int) $user->id;
 
-        $updatedEmployeeIds = array_values(array_filter($employeeIds, fn($id) => (int)$id !== $userId));
+        $updatedEmployeeIds = array_values(array_filter($employeeIds, fn($id) => (int) $id !== $userId));
 
         $team->employee_ids = $updatedEmployeeIds;
 

@@ -46,8 +46,6 @@ class LeaveRequest extends FormRequest
             'end_day.after_or_equal' => 'The end date must be after or equal to the start date.',
             'type_of_leave.required' => 'Please select a type of leave.',
             'type_of_leave.in' => 'The selected type of leave is invalid.',
-            'status_of_leave.required' => 'The status of leave is required.',
-            'status_of_leave.in' => 'The status of leave must be pending, approved, or rejected.',
         ];
     }
 }

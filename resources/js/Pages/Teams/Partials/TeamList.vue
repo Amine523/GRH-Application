@@ -3,7 +3,7 @@
         <header class="mb-6 flex justify-between items-center">
             <h2 class="text-lg font-medium text-gray-900">Team List</h2>
             <Link 
-                v-if="isAdmin" 
+                v-if="isAdmin || isProjectManager" 
                 :href="route('teams.create')" 
                 class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
             >

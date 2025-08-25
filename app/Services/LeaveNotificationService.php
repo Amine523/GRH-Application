@@ -11,7 +11,7 @@ class LeaveNotificationService
     {
         // Send to user
         Mail::to($user->email)->send(new LeaveRequestMail($user->fullName, 'user-approved', $leave));
-        
+
         // Find user's team and project manager
         $team = \App\Models\Team::whereJsonContains('employee_ids', $user->id)->first();
         if ($team && $team->projectManager) {
@@ -19,15 +19,15 @@ class LeaveNotificationService
             Mail::to($team->projectManager->email)
                 ->send(new LeaveRequestMail($user->fullName, 'pm-notification', $leave));
         }
-        
+
         // Send to HR
         Mail::to(['grh@softtodo.com', 'fatma.abid@softtodo.com'])
             ->send(new LeaveRequestMail($user->fullName, 'hr-notification', $leave));
-        
-//         // Send email to the user
+
+        //         // Send email to the user
 //         Mail::to($user->email)->send(new LeaveRequestMail($fullName, 'user-approved', $leave));
-        
-//         // Send notification to HR
+
+        //         // Send notification to HR
 //         Mail::to(['grh@softtodo.com', 'fatma.abid@softtodo.com'])
 //             ->send(new LeaveRequestMail($fullName, 'hr-notification', $leave));
     }

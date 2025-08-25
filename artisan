@@ -15,4 +15,7 @@ $status = (require_once __DIR__.'/bootstrap/app.php')
 // Run migrations to create teams table and update users table
 exec('php artisan migrate');
 
+// Run migration to create project_user table
+exec('php artisan migrate --path=database/migrations/2023_03_01_000000_create_project_user_table.php');
+
 exit($status);
